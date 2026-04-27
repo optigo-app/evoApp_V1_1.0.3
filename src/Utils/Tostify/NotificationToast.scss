@@ -1,0 +1,41 @@
+.notification-toast {
+  position: fixed;
+  top: 60px;
+  right: -110%;
+  transform: translateX(0);
+  padding: 14px 20px;
+  border-radius: 12px;
+  font-size: 15px;
+  font-weight: 500;
+  z-index: 999999;
+  opacity: 0;
+  width: 60%;
+  max-width: 320px;
+  text-align: center;
+  box-shadow: 0 6px 24px rgba(0, 0, 0, 0.15), 0 0 0 1px rgba(0, 0, 0, 0.05);
+  word-wrap: break-word;
+
+  &.toast-in {
+    animation: slideInRight 0.4s ease-out forwards;
+  }
+
+  &.toast-in.toast-out {
+    animation: slideOutRight 0.4s ease-in forwards;
+  }
+
+  @media (max-width: 480px) {
+    font-size: 12px;
+    padding: 12px 16px;
+    width: 75%;
+  }
+}
+
+@keyframes slideInRight {
+  from { right: -110%; opacity: 0; }
+  to   { right: 50px;  opacity: 1; }
+}
+
+@keyframes slideOutRight {
+  from { right: -10px;  opacity: 1; }
+  to   { right: 50px; opacity: 0; }
+}

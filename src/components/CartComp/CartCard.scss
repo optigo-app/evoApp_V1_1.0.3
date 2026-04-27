@@ -1,0 +1,153 @@
+@import "../../Variables.scss";
+
+.Cart-card {
+  border-radius: 8px !important;
+  box-shadow: rgba(0, 0, 0, 0.01) 0px 0px 3px 0px,
+    rgba(27, 31, 35, 0.1) 0px 0px 0px 1px !important;
+  padding: 10px;
+  position: relative;
+  font-family: $font-family;
+  transition: 0.3s ease-in-out;
+
+  .card-content {
+    display: flex;
+    align-items: flex-start;
+    gap: 12px;
+    position: relative;
+  }
+
+  .product-image {
+    width: 95%;
+    border-radius: 8px;
+    object-fit: cover;
+  }
+
+  .product-details {
+    flex: 1;
+
+    .product-id {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+
+      .itemCode {
+        font-size: 12px;
+        color: $text2ndColor;
+      }
+
+      .status-dot {
+        width: 8px;
+        height: 8px;
+        background-color: green;
+        border-radius: 50%;
+      }
+    }
+
+    .product-title {
+      font-weight: 600;
+      margin: 4px 0;
+      font-family: $font-family;
+      line-height: 1.2;
+      text-transform: capitalize;
+      font-size: 12px;
+    }
+
+    .price-section {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+
+      .old-price {
+        text-decoration: line-through;
+        color: $placeholderColor;
+        font-size: 12px;
+      }
+
+      .old-price-withoutdiscount {
+        color: $placeholderColor;
+        font-size: 12px;
+      }
+
+      .new-price {
+        color: $heightlightColor;
+        font-weight: 600;
+        font-size: 13px;
+      }
+
+      .tax-amount {
+        font-size: 11px;
+        color: $text2ndColor;
+        font-weight: normal;
+      }
+
+      .newprice_save {
+        font-weight: 600;
+        color: green;
+        font-size: 12px;
+      }
+    }
+
+    .extra-price-details {
+      margin-top: 0px;
+      display: flex;
+      gap: 12px;
+      flex-wrap: wrap;
+
+      .discount-amount,
+      .tax-amount {
+        font-size: 12px;
+        color: $text2ndColor;
+        font-weight: normal;
+      }
+    }
+
+    .actions {
+      margin-top: 8px;
+      position: absolute;
+      bottom: 0px;
+      right: -10px;
+
+      .btn {
+        width: 26px;
+        height: 26px;
+        padding: 5px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        color: $text2ndColor;
+        box-shadow: rgba(99, 99, 99, 0.1) 0px 2px 8px 0px;
+        border-radius: 50%;
+        background-color: transparent;
+        transition: all 0.3s ease;
+
+        &:hover {
+          background-color: $heightlightColor;
+          color: #fff;
+          cursor: pointer;
+          box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+        }
+
+        &:active {
+          transform: scale(0.95);
+        }
+      }
+    }
+  }
+
+  .product-checkbox {
+    position: absolute;
+    top: -10px;
+    right: -10px;
+    color: $heightlightColor;
+
+    &.Mui-checked {
+      color: $heightlightColor;
+    }
+
+    &:hover {
+      background-color: rgba(184, 134, 11, 0.04);
+    }
+  }
+}
+
+

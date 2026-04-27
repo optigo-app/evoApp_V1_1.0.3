@@ -1,0 +1,352 @@
+@import '../../Variables.scss';
+
+.AddCustomerContainer {
+  padding-top: 60px;
+  font-family: Arial, sans-serif;
+
+  .Header_main {
+    position: fixed;
+    top: 0;
+    width: 100%;
+    // box-shadow: rgba(0, 0, 0, 0.1) 0px 0px 5px 0px, rgba(0, 0, 0, 0.1) 0px 0px 1px 0px;
+    background: linear-gradient(to right, #b2069b, #3909c2);
+    height: 55px;
+    display: flex;
+    align-items: center;
+    z-index: 1000;
+
+    .header-container {
+      width: 100%;
+      padding: 0 15px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+
+    .header_title {
+      font-size: 20px;
+      font-weight: bold;
+      margin: 0;
+      color: white;
+    }
+
+    .AddCustomer_Btn {
+      height: 36px;
+      width: 40px;
+      border-radius: 6px;
+      font-weight: bold;
+      box-shadow: none;
+      background-color: transparent;
+      min-width: 10px !important;
+      padding: 0px !important;
+      margin: 0px !important;
+      border-radius: 50px !important;
+    }
+  }
+
+  .AddCustomer_sub{
+    margin: 10px;
+  }
+
+  .form-section {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+    margin-top: 20px;
+
+    input {
+      padding: 10px;
+      font-size: 16px;
+    }
+  }
+
+  .addFormBtn{
+    background-color: $heightlightColor;
+    color: $BtnFontColor;
+    font-weight: 600;
+  }
+
+  .result-section {
+    padding: 16px 0px;
+    border-radius: 8px;
+
+    h4 {
+      margin-bottom: 5px;
+      font-weight: bold;
+    }
+
+    p {
+      margin: 4px 0;
+    }
+  }
+
+  .customercard_button {
+    width: 100% !important;
+    border-radius: 8px !important;
+    box-shadow: rgba(0, 0, 0, 0.01) 0px 0px 3px 0px,
+      rgba(27, 31, 35, 0.1) 0px 0px 0px 1px !important;
+    padding: 10px;
+    position: relative;
+    font-family: $font-family;
+    transition: 0.3s ease-in-out;
+
+    .card-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      width: 70% !important;
+
+      h5 {
+        font-size: 15px !important;
+        font-weight: 600;
+        color: $titleColor !important;
+        margin: 0px !important;
+        display: flex !important;
+        font-family: $font-family !important;
+        text-transform: capitalize;
+      }
+
+      p {
+        margin: 0px !important;
+        font-size: 11px;
+        color: $text2ndColor !important;
+        display: flex !important;
+        font-family: $font-family !important;
+      }
+
+      .status-badge {
+        padding: 4px 10px;
+        border-radius: 12px;
+        font-size: 13px;
+        font-weight: 500;
+        display: inline-flex;
+        align-items: center;
+
+        &.available {
+          background-color: #d4edda;
+          color: #155724;
+        }
+
+        &.in-session {
+          background-color: #f8d7da;
+          color: #721c24;
+        }
+
+        &.active-timer {
+          background-color: #fff3cd;
+          color: #856404;
+        }
+      }
+    }
+  }
+}
+.addCustomer_modalbox {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  width: 90%;
+  background: white;
+  padding: 24px;
+  border-radius: 8px;
+  transform: translate(-50%, -50%);
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.2);
+  max-height: 80vh;
+  overflow: auto;
+  outline: none;
+}
+
+.addFormBtn{
+  background-color: $heightlightColor;
+  color: $BtnFontColor;
+  font-weight: 600;
+}
+
+
+.addCustomer_modalbox {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  width: calc(100% - 32px);
+  max-width: 400px;
+  background: #fff;
+  border-radius: 20px;
+  outline: none;
+  overflow: hidden;
+  border: 1px solid rgba(0, 0, 0, 0.08);
+
+  // ── Header ──────────────────────────────────
+  .modal-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 16px 5px 14px;
+    border-bottom: 1px solid #f0f0f0;
+
+    &__left {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+
+    &__icon {
+      width: 32px;
+      height: 32px;
+      border-radius: 50%;
+      background: #e8f5e9;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      flex-shrink: 0;
+    }
+
+    &__title {
+      font-size: 15px !important;
+      font-weight: 600 !important;
+      color: #1a1a1a;
+    }
+  }
+
+  .modal-close-btn {
+    width: 28px !important;
+    height: 28px !important;
+    border: 1px solid #e0e0e0 !important;
+    color: #666 !important;
+    border-radius: 50% !important;
+    padding: 0 !important;
+
+    &:hover {
+      background: #f5f5f5 !important;
+    }
+  }
+
+  .modal-body {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+    padding: 16px 0px;
+    max-height: 55vh;
+    overflow-y: auto;
+
+    // Thin scrollbar
+    &::-webkit-scrollbar { width: 4px; }
+    &::-webkit-scrollbar-track { background: transparent; }
+    &::-webkit-scrollbar-thumb { background: #ddd; border-radius: 4px; }
+  }
+
+  // ── Section label ───────────────────────────
+  .section-label {
+    font-size: 11px !important;
+    font-weight: 600 !important;
+    letter-spacing: 0.07em;
+    text-transform: uppercase;
+    color: #999 !important;
+    margin-top: 2px;
+
+    &__optional {
+      font-weight: 400;
+      text-transform: none;
+      font-size: 10px;
+      color: #bbb;
+    }
+  }
+
+  // ── Two-column row ───────────────────────────
+  .field-row {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 10px;
+  }
+
+  // ── Show more link ───────────────────────────
+  .show-more-link {
+    font-size: 13px !important;
+    color: #1976d2 !important;
+    font-weight: 500 !important;
+    padding: 0 !important;
+    text-align: left;
+    cursor: pointer;
+
+    &--hide {
+      color: #e53935 !important;
+      margin-top: 4px;
+    }
+  }
+
+  // ── Extra fields (address) ───────────────────
+  .extra-fields {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+  }
+
+  // ── MUI TextField overrides ──────────────────
+  .MuiTextField-root {
+    .MuiInputBase-root {
+      border-radius: 10px;
+      background: #fafafa;
+      font-size: 14px;
+
+      &.Mui-focused {
+        background: #fff;
+      }
+
+      fieldset {
+        border-color: #e8e8e8;
+        border-width: 1px;
+      }
+
+      &:hover fieldset {
+        border-color: #bdbdbd;
+      }
+
+      &.Mui-focused fieldset {
+        border-color: #1976d2;
+        border-width: 1.5px;
+      }
+
+      &.Mui-error fieldset {
+        border-color: #e53935;
+      }
+    }
+
+    .MuiInputLabel-root {
+      font-size: 13px;
+      color: #888;
+
+      &.Mui-focused { color: #1976d2; }
+      &.Mui-error   { color: #e53935; }
+    }
+
+    .MuiFormHelperText-root {
+      margin-left: 0 !important;
+      font-size: 11px;
+    }
+  }
+
+  // ── Footer ──────────────────────────────────
+  .modal-footer {
+    padding: 14px 18px 18px;
+    border-top: 1px solid #f0f0f0;
+  }
+
+  .save-btn {
+    height: 46px !important;
+    border-radius: 12px !important;
+    background: linear-gradient(to right, #b2069b, #3909c2) !important;
+    font-size: 14px !important;
+    font-weight: 600 !important;
+    text-transform: none !important;
+    letter-spacing: 0 !important;
+    box-shadow: none !important;
+
+    &:hover {
+      background-color: #1B5E20 !important;
+      box-shadow: none !important;
+    }
+
+    &:active {
+      transform: scale(0.98);
+    }
+  }
+}

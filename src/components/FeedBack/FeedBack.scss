@@ -1,0 +1,403 @@
+// ─── Design Tokens ────────────────────────────────────────────────
+$purple-deep:   #5b21b6;
+$purple-main:   #7c3aed;
+$purple-mid:    #a855f7;
+$purple-light:  #ede9fe;
+$purple-faint:  #f5f3ff;
+$gold:          #f59e0b;
+$gold-glow:     rgba(245, 158, 11, 0.45);
+$text-primary:  #1e1b4b;
+$text-secondary:#6b7280;
+$card-bg:       #ffffff;
+$bg:            #f5f3ff;
+$radius-card:   18px;
+$radius-btn:    50px;
+
+// ─── Reset / Root ─────────────────────────────────────────────────
+.fb-root {
+  font-family: 'Nunito', 'Segoe UI', sans-serif;
+  background: $bg;
+  min-height: 100vh;
+  max-width: 480px;          // centered on desktop, full-width on mobile
+  margin: 0 auto;
+  position: relative;
+  overflow-x: hidden;
+}
+
+.fb-appbar {
+  position: fixed;
+  top: 0;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 100%;
+  max-width: 480px;
+  height: 58px;
+  background: linear-gradient(to right, #b2069b, #3909c2);
+  display: flex;
+  align-items: center;
+  padding: 0 14px;
+  z-index: 1000;
+  box-shadow: 0 4px 20px rgba(91, 33, 182, 0.35);
+
+  &__back,
+  &__home {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 36px;
+    height: 36px;
+    border-radius: 50%;
+    background: rgba(255, 255, 255, 0.18);
+    border: none;
+    color: #fff;
+    cursor: pointer;
+    transition: background 0.2s;
+    flex-shrink: 0;
+
+    &:active { background: rgba(255,255,255,0.3); }
+  }
+
+  &__title {
+    flex: 1;
+    text-align: center;
+    font-size: 17px;
+    font-weight: 800;
+    color: #fff;
+    letter-spacing: 0.3px;
+  }
+}
+
+// ─── Hero Banner ──────────────────────────────────────────────────
+.fb-hero {
+  margin-top: 58px;
+  padding: 28px 20px 20px;
+  background: linear-gradient(to right, #b2069b, #3909c2);
+  text-align: center;
+  position: relative;
+  overflow: hidden;
+
+  // decorative circle
+  &::before {
+    content: '';
+    position: absolute;
+    width: 220px;
+    height: 220px;
+    border-radius: 50%;
+    background: rgba(255,255,255,0.07);
+    top: -60px;
+    right: -60px;
+    pointer-events: none;
+  }
+  &::after {
+    content: '';
+    position: absolute;
+    width: 140px;
+    height: 140px;
+    border-radius: 50%;
+    background: rgba(255,255,255,0.06);
+    bottom: -40px;
+    left: -30px;
+    pointer-events: none;
+  }
+
+  &__icon {
+    font-size: 46px;
+    line-height: 1;
+    filter: drop-shadow(0 4px 10px rgba(0,0,0,0.2));
+    animation: bounceIn 0.6s cubic-bezier(0.34,1.56,0.64,1) both;
+  }
+
+  &__sub {
+    margin: 10px 0 0;
+    color: rgba(255,255,255,0.82);
+    font-size: 13.5px;
+    font-weight: 600;
+    letter-spacing: 0.2px;
+  }
+}
+
+@keyframes bounceIn {
+  0% { transform: scale(0.4); opacity: 0; }
+  100% { transform: scale(1); opacity: 1; }
+}
+
+// ─── Scroll Area ──────────────────────────────────────────────────
+.fb-scroll {
+  padding: 16px 14px 0;
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+
+// ─── Question Card ────────────────────────────────────────────────
+.fb-card {
+  background: $card-bg;
+  border-radius: $radius-card;
+  padding: 18px 16px 14px;
+  box-shadow: 0 2px 12px rgba(91,33,182,0.07);
+  border: 2px solid transparent;
+  transition: border-color 0.25s, box-shadow 0.25s;
+  position: relative;
+  overflow: hidden;
+  animation: slideUp 0.4s ease both;
+
+  @for $i from 1 through 15 {
+    &:nth-child(#{$i}) { animation-delay: #{$i * 0.05}s; }
+  }
+
+  &--answered {
+    border-color: $purple-light;
+    box-shadow: 0 4px 20px rgba(124,58,237,0.12);
+
+    &::before {
+      content: '✓';
+      position: absolute;
+      top: 12px;
+      right: 14px;
+      font-size: 13px;
+      font-weight: 800;
+      color: $purple-main;
+      background: $purple-light;
+      width: 22px;
+      height: 22px;
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      line-height: 22px;
+      text-align: center;
+    }
+  }
+
+  &__num {
+    font-size: 11px;
+    font-weight: 800;
+    letter-spacing: 1.2px;
+    color: $purple-mid;
+    text-transform: uppercase;
+    margin-bottom: 6px;
+    opacity: 0.7;
+  }
+
+  &__question {
+    font-size: 15px;
+    font-weight: 700;
+    color: $text-primary;
+    line-height: 1.5;
+    margin: 0 0 14px;
+    padding-right: 28px;   // room for checkmark badge
+  }
+}
+
+@keyframes slideUp {
+  from { opacity: 0; transform: translateY(18px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+
+// ─── Star Rating ─────────────────────────────────────────────────
+.fb-stars {
+  display: flex;
+  gap: 8px;
+  padding: 4px 0 6px;
+
+  &__star {
+    font-size: 34px;
+    line-height: 1;
+    color: #d1d5db;
+    background: none;
+    border: none;
+    cursor: pointer;
+    padding: 0;
+    transition: color 0.2s, transform 0.15s;
+
+    &:hover { transform: scale(1.2); }
+
+    &--on {
+      color: $gold;
+      text-shadow: 0 2px 8px $gold-glow;
+      animation: starPop 0.22s ease-in-out;
+    }
+  }
+}
+
+@keyframes starPop {
+  0%   { transform: scale(1); }
+  50%  { transform: scale(1.35); }
+  100% { transform: scale(1); }
+}
+
+// ─── Emoji Options ───────────────────────────────────────────────
+.fb-emoji {
+  display: flex;
+  gap: 8px;
+  padding: 4px 0 6px;
+
+  &__btn {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 5px;
+    padding: 10px 4px 8px;
+    border: 2px solid #e5e7eb;
+    border-radius: 14px;
+    background: #fafafa;
+    cursor: pointer;
+    transition: all 0.22s ease;
+
+    &:active { transform: scale(0.94); }
+
+    &--active {
+      border-color: $purple-main;
+      background: $purple-faint;
+      transform: scale(1.06);
+      box-shadow: 0 4px 14px rgba(124,58,237,0.18);
+    }
+  }
+
+  &__icon {
+    font-size: 28px;
+    display: block;
+    transition: transform 0.2s;
+
+    .fb-emoji__btn--active & {
+      transform: scale(1.22);
+    }
+  }
+
+  &__label {
+    font-size: 10.5px;
+    font-weight: 700;
+    color: $text-secondary;
+    letter-spacing: 0.2px;
+
+    .fb-emoji__btn--active & {
+      color: $purple-main;
+    }
+  }
+}
+
+// ─── Radio Group ─────────────────────────────────────────────────
+.fb-radio {
+  gap: 2px;
+
+  &__item {
+    margin: 0;
+    padding: 4px 8px;
+    border-radius: 10px;
+    transition: background 0.15s;
+
+    &:hover { background: $purple-faint; }
+
+    .MuiTypography-root {
+      font-size: 14px;
+      font-weight: 600;
+      color: $text-primary;
+    }
+  }
+}
+
+// ─── Remark Button ───────────────────────────────────────────────
+.fb-remark-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  margin-top: 12px;
+  padding: 7px 14px;
+  border-radius: $radius-btn;
+  border: 1.5px dashed #c4b5fd;
+  background: transparent;
+  color: $purple-main;
+  font-size: 12.5px;
+  font-weight: 700;
+  cursor: pointer;
+  transition: all 0.2s;
+  letter-spacing: 0.2px;
+
+  &:active { transform: scale(0.96); }
+
+  &--filled {
+    border-style: solid;
+    border-color: $purple-main;
+    background: $purple-faint;
+  }
+
+  &:hover {
+    background: $purple-faint;
+    border-color: $purple-main;
+  }
+}
+
+// ─── Sticky Footer ───────────────────────────────────────────────
+.fb-footer {
+  position: fixed;
+  bottom: 0;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 100%;
+  max-width: 480px;
+  display: flex;
+  gap: 10px;
+  padding: 12px 16px calc(12px + env(safe-area-inset-bottom));
+  background: rgba(245,243,255,0.92);
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
+  border-top: 1px solid rgba(167,139,250,0.2);
+  z-index: 999;
+
+  &__cancel {
+    flex: 1;
+    padding: 14px 0;
+    border-radius: $radius-btn;
+    border: 2px solid $purple-light;
+    background: transparent;
+    color: $purple-main;
+    font-size: 14px;
+    font-weight: 800;
+    cursor: pointer;
+    transition: all 0.2s;
+
+    &:active { transform: scale(0.96); }
+    &:hover { background: $purple-faint; }
+  }
+
+  &__save {
+    flex: 2;
+    padding: 14px 0;
+    border-radius: $radius-btn;
+    border: none;
+    background: linear-gradient(to right, #b2069b, #3909c2);
+    color: #fff;
+    font-size: 14px;
+    font-weight: 800;
+    cursor: pointer;
+    letter-spacing: 0.3px;
+    box-shadow: 0 6px 20px rgba(124,58,237,0.38);
+    transition: all 0.2s;
+
+    &:active { transform: scale(0.96); box-shadow: none; }
+    &:hover  { box-shadow: 0 8px 24px rgba(124,58,237,0.5); }
+  }
+}
+
+// ─── Dialog ──────────────────────────────────────────────────────
+.fb-dialog {
+  border-radius: 20px !important;
+  overflow: hidden;
+
+  &__title {
+    font-weight: 800 !important;
+    font-size: 17px !important;
+    color: $text-primary !important;
+    padding-bottom: 8px !important;
+  }
+}
+
+// ─── Responsive: desktop wrapper feel ────────────────────────────
+@media (min-width: 481px) {
+  .fb-root {
+    box-shadow: 0 0 60px rgba(91,33,182,0.12);
+    border-radius: 0;
+    min-height: 100vh;
+  }
+}

@@ -1,0 +1,41 @@
+
+
+  .Header_main {
+    position: fixed;
+    top: 0;
+    width: 100%;
+    // box-shadow: rgba(0, 0, 0, 0.1) 0px 0px 5px 0px, rgba(0, 0, 0, 0.1) 0px 0px 1px 0px;
+    background: linear-gradient(to right, #b2069b, #3909c2);
+    height: 55px;
+    display: flex;
+    align-items: center;
+    z-index: 1000;
+
+    .header-container {
+      width: 100%;
+      padding: 0 15px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+
+    .header_title {
+      font-size: 20px;
+      font-weight: bold;
+      margin: 0;
+      color: white;
+    }
+
+    .AddCustomer_Btn {
+      height: 36px;
+      width: 40px;
+      border-radius: 6px;
+      font-weight: bold;
+      box-shadow: none;
+      background-color: transparent;
+      min-width: 10px !important;
+      padding: 0px !important;
+      margin: 0px !important;
+      border-radius: 50px !important;
+    }
+  }

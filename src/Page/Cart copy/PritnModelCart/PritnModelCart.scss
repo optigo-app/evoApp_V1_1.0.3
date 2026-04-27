@@ -1,0 +1,92 @@
+.printModelMain_cart {
+  width: 305px !important;
+
+  .P_toptitle {
+    font-size: 10px;
+    text-align: center;
+    margin: 0px;
+  }
+
+  .p_address {
+    margin: 0px;
+    font-size: 8px;
+    text-align: center;
+    width: 80%;
+  }
+
+  .p_city {
+    margin: 0px;
+    text-align: center;
+    font-size: 8px;
+  }
+
+  .p_gst {
+    margin: 0px;
+    text-align: center;
+    font-size: 8px;
+  }
+
+  .p_estimate {
+    margin: 5px 0px;
+    text-align: center;
+    font-size: 10px;
+    color: black;
+    text-decoration: underline;
+    font-weight: 600;
+  }
+
+  .totalPriceValus {
+    margin: 2px;
+    min-width: 50px;
+    display: flex;
+    justify-content: flex-end;
+    font-size: 8px;
+  }
+
+  .p_info_title {
+    font-size: 8px;
+    margin: 0px;
+  }
+
+  .p_info_value {
+    font-size: 8px;
+    font-weight: 600;
+    margin: 0px;
+  }
+
+  .deatilTitle_p {
+    margin: 0px 2px;
+    font-weight: 600;
+    font-size: 8px;
+    min-width: 20px;
+    color: black;
+    font-weight: 600;
+    min-width: 40px;
+  }
+
+  .deatilTitle_com {
+    margin: 0px 2px;
+    font-weight: 600;
+    font-size: 8px;
+    min-width: 10px;
+    color: black;
+    font-weight: 600;
+  }
+
+  .deatil_value_p {
+    margin: 0px 2px;
+    font-size: 8px;
+  }
+
+  .deatil_totla_p {
+    margin: 0px;
+    font-size: 8px;
+  }
+
+  .deatil_title_view {
+    font-size: 7px;
+    font-weight: 600;
+    color: black;
+    margin: 0px;
+  }
+}

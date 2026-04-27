@@ -1,0 +1,103 @@
+[
+    {
+      "id": 1,
+      "image": "https://encrypted-tbn2.gstatic.com/shopping?q=tbn:ANd9GcS8tD38b_Z-KSk7OBNodIe6bM19rA6zcPcPpB5mKdTumYvP7C-C8KdW-gjVdq2ICvO1NyLdlgyzP0U8XqptL81Cz6N-uLPRyPZn9rEj7fqEJGoQ7l_9eQq9",
+      "itemCode": "JD-2024-001",
+      "title": "18K Gold Diamond Ring",
+      "oldPrice": 45000,
+      "newPrice": 42500,
+      "inStock": true,
+      "isSelected": false
+    },
+    {
+      "id": 2,
+      "image": "https://media.istockphoto.com/id/1427466115/photo/beauty-model-in-wedding-jewelry-set-elegant-woman-in-necklace-with-earring-and-ring-beautiful.jpg?s=612x612&w=0&k=20&c=AT9DfkZvRbxKkuqjCEGjF9P3D3dOKZvRh2J5hw8mjt0=",
+      "itemCode": "JD-2024-002",
+      "title": "Platinum Wedding Band",
+      "oldPrice": 30000,
+      "newPrice": 28500,
+      "inStock": false,
+      "isSelected": true
+    },
+    {
+      "id": 3,
+      "image": "https://cdn.britannica.com/16/47016-050-750238DA/brooch-emeralds-Stomacher-flowers-enamel-treasure-gold.jpg",
+      "itemCode": "JD-2024-003",
+      "title": "Diamond Earrings",
+      "oldPrice": 20000,
+      "newPrice": 19000,
+      "inStock": true,
+      "isSelected": false
+    },
+    {
+      "id": 4,
+      "image": "https://phuljhadi.com/cdn/shop/files/0J7A0647copy_600x.jpg?v=1746480747",
+      "itemCode": "JD-2024-004",
+      "title": "Ruby Pendant Necklace",
+      "oldPrice": 38000,
+      "newPrice": 36000,
+      "inStock": true,
+      "isSelected": false
+    },
+    {
+      "id": 5,
+      "image": "https://t4.ftcdn.net/jpg/12/25/13/03/360_F_1225130329_pWjnSKikf49PggP8noSAluXiKmbB9sTG.jpg",
+      "itemCode": "JD-2024-005",
+      "title": "Sapphire 3-Stone Ring",
+      "oldPrice": 42000,
+      "newPrice": 40000,
+      "inStock": false,
+      "isSelected": false
+    },
+    {
+      "id": 6,
+      "image": "https://rukminim2.flixcart.com/image/850/1000/xif0q/necklace-chain/j/t/e/1-hn-d-907-necklace-set-rofarword-original-imahaz2swqsr9xhh.jpeg?q=20&crop=false",
+      "itemCode": "JD-2024-006",
+      "title": "Minimalist Gold Bracelet",
+      "oldPrice": 15000,
+      "newPrice": 14500,
+      "inStock": true,
+      "isSelected": true
+    },
+    {
+      "id": 7,
+      "image": "https://rubans.in/cdn/shop/files/rubans-22k-gold-plated-golden-beads-studded-beaded-traditional-jewellery-set-jewellery-set-37510462013614.jpg?v=1733944702",
+      "itemCode": "JD-2024-007",
+      "title": "Emerald Gemstone Necklace",
+      "oldPrice": 50000,
+      "newPrice": 47000,
+      "inStock": true,
+      "isSelected": false
+    },
+    {
+      "id": 8,
+      "image": "https://m.media-amazon.com/images/I/910h4q4iaRL.jpg",
+      "itemCode": "JD-2024-008",
+      "title": "Stylish Gold Earrings",
+      "oldPrice": 18000,
+      "newPrice": 17000,
+      "inStock": false,
+      "isSelected": true
+    },
+    {
+      "id": 9,
+      "image": "https://encrypted-tbn1.gstatic.com/shopping?q=tbn:ANd9GcTLfvaQR5BKcutb-cAFZhDeGpHUA40-hUQOLYNP_0JNFRtXHdVaIOdJ_QhbsJfCIioE8BEj64bSDWkScmXdKeo557ENlfUxx2suwA_WCzk",
+      "itemCode": "JD-2024-009",
+      "title": "Platinum Couple Rings",
+      "oldPrice": 52000,
+      "newPrice": 49500,
+      "inStock": true,
+      "isSelected": false
+    },
+    {
+      "id": 10,
+      "image": "https://5.imimg.com/data5/TG/DN/MY-37294786/designer-artificial-jewellery.jpg",
+      "itemCode": "JD-2024-010",
+      "title": "Rose Gold Infinity Pendant",
+      "oldPrice": 25000,
+      "newPrice": 23500,
+      "inStock": true,
+      "isSelected": false
+    }
+  ]
+  

@@ -1,0 +1,19 @@
+$font-family: "Public Sans", sans-serif, '-apple-system', 'BlinkMacSystemFont', '"Segoe UI"', 'Roboto', '"Helvetica Neue"', 'Arial', 'sans-serif', '"Apple Color Emoji"', '"Segoe UI Emoji"', '"Segoe UI Symbol"';
+$titleColor: #444050;
+$secondaryColor: #7D7f85;
+$text2ndColor: #6D6B77;
+$placeholderColor: #808080;
+
+//For Button Use
+$heightlightColor: #5e08b6;
+$BtnFontColor: white;
+$successColor: #27ae60;
+$warningColor: #f39c12;
+
+
+$headerbgColor: linear-gradient(75deg, #792467 0%, #6b409f 36%, #5d5ad2 100%);
+
+.MuiTypography-root {
+    font-family: $font-family !important;
+    color: $titleColor;
+}

@@ -1,0 +1,185 @@
+@import "../../variables.scss";
+
+.CartMain {
+  padding: 0px;
+  font-family: $font-family;
+  // height: 100vh;
+
+  .CartHeaderClBtn {
+    margin-bottom: 5px;
+    button {
+      font-family: $font-family !important;
+      text-transform: capitalize !important;
+      font-size: 14px;
+      color: $titleColor !important;
+      padding: 0px 8px;
+      text-decoration: underline !important;
+
+      &:hover {
+        background: transparent !important;
+        color: $heightlightColor !important;
+      }
+    }
+  }
+
+  .cartAll-checkbox {
+    color: $heightlightColor;
+    margin-right: 8px;
+
+    &.Mui-checked {
+      color: $heightlightColor;
+    }
+
+    &:hover {
+      background-color: rgba(184, 134, 11, 0.04);
+    }
+  }
+
+  .CartItemList {
+    padding-bottom: 118px;
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+  }
+
+  .CartActionsFooter {
+    height: 50px;
+    position: fixed;
+    bottom: 0;
+    left: 0;
+    width: 100%;
+    background-color: #ffffff;
+    border-top: 1px solid #ddd;
+    box-shadow: 0 -2px 8px rgba(0, 0, 0, 0.05);
+    z-index: 1000;
+
+    .action-buttons {
+      padding: 0 5px;
+      margin-top: 8px;
+      margin-bottom: 8px;
+      display: flex;
+
+      button {
+        width: 50%;
+        color: $titleColor !important;
+        border: 1px solid #d3d3d3 !important;
+        border-radius: 8px !important;
+        background-color: transparent !important;
+        text-transform: none;
+        font-family: $font-family !important;
+        font-size: 12px;
+      }
+    }
+
+    .footer-divider {
+      margin: 8px 0;
+    }
+
+    .text-buttons {
+      display: flex;
+      gap: 12px;
+      padding: 0 15px;
+
+      button {
+        font-family: $font-family !important;
+        color: $heightlightColor !important;
+        font-weight: 500;
+        width: 50%;
+        text-transform: none;
+      }
+    }
+  }
+}
+
+.cart_printDesign {
+  // width: 305px !important;
+
+  .P_toptitle {
+    font-size: 10px;
+    text-align: center;
+    margin: 0px;
+  }
+
+  .p_address {
+    margin: 0px;
+    font-size: 8px;
+    text-align: center;
+    width: 80%;
+  }
+
+  .p_city {
+    margin: 0px;
+    text-align: center;
+    font-size: 8px;
+  }
+
+  .p_gst {
+    margin: 0px;
+    text-align: center;
+    font-size: 8px;
+  }
+
+  .p_estimate {
+    margin: 5px 0px;
+    text-align: center;
+    font-size: 10px;
+    color: black;
+    text-decoration: underline;
+    font-weight: 600;
+  }
+
+  .totalPriceValus {
+    margin: 2px;
+    min-width: 50px;
+    display: flex;
+    justify-content: flex-end;
+    font-size: 8px;
+  }
+
+  .p_info_title {
+    font-size: 8px;
+    margin: 0px;
+  }
+
+  .p_info_value {
+    font-size: 8px;
+    font-weight: 600;
+    margin: 0px;
+  }
+
+  .deatilTitle_p {
+    margin: 0px 2px;
+    font-weight: 600;
+    font-size: 8px;
+    min-width: 20px;
+    color: black;
+    font-weight: 600;
+    min-width: 40px;
+  }
+
+  .deatilTitle_com {
+    margin: 0px 2px;
+    font-weight: 600;
+    font-size: 8px;
+    min-width: 10px;
+    color: black;
+    font-weight: 600;
+  }
+
+  .deatil_value_p {
+    margin: 0px 2px;
+    font-size: 8px;
+  }
+
+  .deatil_totla_p {
+    margin: 0px;
+    font-size: 8px;
+  }
+
+  .deatil_title_view {
+    font-size: 7px;
+    font-weight: 600;
+    color: black;
+    margin: 0px;
+  }
+}

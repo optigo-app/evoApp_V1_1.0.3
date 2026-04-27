@@ -1,0 +1,151 @@
+/* General styling for the account delete container */
+.account-delete-container {
+    padding: 15px;
+    font-family: Arial, sans-serif;
+  }
+  
+  /* Heading for the entire page */
+  h2 {
+    font-size: 1.6rem;
+    font-weight: bold;
+    margin-bottom: 20px;
+    text-align: center;
+    color: #333;
+  }
+  
+  /* Paragraphs for descriptive text */
+  p {
+    font-size: 1rem;
+    line-height: 1.5;
+    margin-bottom: 10px;
+    color: #555;
+  }
+  
+  /* Style for the steps section */
+  h3 {
+    font-size: 1.4rem;
+    margin-top: 20px;
+    font-weight: bold;
+    color: #333;
+  }
+  
+  /* Ordered list style */
+  ol {
+    padding-left: 20px;
+    font-size: 1rem;
+    line-height: 1.6;
+  }
+  
+  /* Style for notes section */
+  .note {
+    margin-top: 30px;
+    font-size: 1rem;
+  }
+  
+  .note h4 {
+    font-size: 1.2rem;
+    font-weight: bold;
+    margin-bottom: 10px;
+  }
+  
+  ul {
+    padding-left: 20px;
+    font-size: 1rem;
+    line-height: 1.6;
+  }
+  
+  /* Styling for the specific mobile app sections */
+  .app-steps,
+  .website-steps {
+    margin-bottom: 20px;
+  }
+  
+  .app-steps {
+    background-color: #f9f9f9;
+    padding: 15px;
+    border-radius: 8px;
+  }
+  
+  .app-steps h3 {
+    color: #007aff; /* iOS color */
+  }
+  
+  .app-steps ol li {
+    color: #333;
+    margin-bottom: 10px;
+  }
+  
+  .website-steps {
+    background-color: #e0f7fa;
+    padding: 15px;
+    border-radius: 8px;
+  }
+  
+  .website-steps h3 {
+    color: #0288d1; /* Website link color */
+  }
+  
+  /* Styling for the Things to Note section */
+  .note ul li {
+    color: #333;
+    margin-bottom: 10px;
+  }
+  
+  /* Mobile-specific adjustments */
+  @media (max-width: 768px) {
+    /* General layout adjustments for smaller screens */
+    .account-delete-container {
+      padding: 10px;
+    }
+  
+    h2 {
+      font-size: 1.4rem;
+    }
+  
+    h3 {
+      font-size: 1.2rem;
+    }
+  
+    ol,
+    ul {
+      padding-left: 15px;
+      font-size: 0.9rem;
+    }
+  
+    .app-steps,
+    .website-steps {
+      padding: 12px;
+      margin-bottom: 15px;
+    }
+  
+    /* App steps section for mobile */
+    .app-steps h3 {
+      font-size: 1.2rem;
+    }
+  
+    /* Website steps section for mobile */
+    .website-steps h3 {
+      font-size: 1.2rem;
+    }
+  }
+  
+  /* Larger screen (tablet and up) styles */
+  @media (min-width: 769px) {
+    .app-steps,
+    .website-steps {
+      padding: 20px;
+    }
+  
+    h2 {
+      font-size: 1.8rem;
+    }
+  
+    .app-steps h3 {
+      font-size: 1.5rem;
+    }
+  
+    .website-steps h3 {
+      font-size: 1.5rem;
+    }
+  }
+  
