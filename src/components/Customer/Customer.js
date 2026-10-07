@@ -97,7 +97,7 @@ const Customer = () => {
   const [stopped, setStopped] = useState({});
   const [endCustomnerInfo, setEndCustomerInfo] = useState();
   const [endReleseCust, setEndReleseCust] = useState();
-  const [loading, setLoading] = useState(false);
+  const [loading, setLoading] = useState(true);
   const [open, setOpen] = useState(false);
   const [openMenu, setOpenMenu] = useState(false);
   const [tabsFixed, setTabsFixed] = useState(false);
@@ -109,6 +109,10 @@ const Customer = () => {
   const cardRefs = useRef({});
   const expandedSectionRefs = useRef({});
   const navigate = useNavigate();
+  const [pageAccessData, setPageAccessData] = useState(null); // null = not loaded yet
+  const hasAccess = (pageId) =>
+    Array.isArray(pageAccessData) &&
+    pageAccessData.some((p) => p.id === pageId && Number(p.isVisiable) === 1);
 
   useEffect(() => {
     navigator?.mediaDevices
@@ -141,6 +145,9 @@ const Customer = () => {
       setAllProfileData(response.DT[0]);
       sessionStorage.setItem("profileData", JSON.stringify(response.DT[0]));
       sessionStorage.setItem("EvoSetting", JSON.stringify(response.DT1));
+      sessionStorage.setItem("MobileCountryCode", JSON.stringify(response.DT2));
+      sessionStorage.setItem("pageAccessData", JSON.stringify(response.DT3));
+      setPageAccessData(response.DT3 || []); // ✅ update state immediately
     }
   };
 
@@ -165,10 +172,14 @@ const Customer = () => {
     setLoading(false);
 
     const storedProfileData = sessionStorage.getItem("profileData");
+    const storedPageAccess = sessionStorage.getItem("pageAccessData"); // ✅
     if (storedProfileData) {
       setAllProfileData(JSON.parse(storedProfileData));
+    }
+    if (storedPageAccess) {
+      setPageAccessData(JSON.parse(storedPageAccess)); // ✅ use cached access data
     } else {
-      GetProfileData();
+      GetProfileData(); // will set pageAccessData itself once it resolves
     }
   };
 
@@ -287,6 +298,7 @@ const Customer = () => {
         bgColor: "linear-gradient(to right, #b2069b, #3909c2)",
         fontColor: "#fff",
         duration: 3000,
+        icon: "warr"
       });
       return;
     }
@@ -303,6 +315,7 @@ const Customer = () => {
         bgColor: "linear-gradient(to right, #b2069b, #3909c2)",
         fontColor: "#fff",
         duration: 3000,
+        icon: "info"
       });
       return;
     }
@@ -329,6 +342,7 @@ const Customer = () => {
           bgColor: "linear-gradient(to right, #b2069b, #3909c2)",
           fontColor: "white",
           duration: 5000,
+          icon: "info"
         });
         navigate(`/JobScanPage`);
         sessionStorage.setItem(
@@ -370,13 +384,17 @@ const Customer = () => {
       if (response?.DT[0]?.stat == 1) {
         setStopped((prev) => ({ ...prev, [customer?.CustomerId]: true }));
         showToast({
-          message: "Session closed.Tell us about your experience",
+          message: "Session closed. Share your experience",
           bgColor: "linear-gradient(to right, #b2069b, #3909c2)",
           fontColor: "white",
           duration: 5000,
+          icon: "success"
         });
         localStorage.removeItem("AllScanJobData");
-        navigate("/feedback");
+        {
+          hasAccess(-1040) &&
+            navigate("/feedback");
+        }
         GetCustomerData();
       }
       setOpen(false);
@@ -403,10 +421,11 @@ const Customer = () => {
           [endCustomnerInfo?.CustomerId]: true,
         }));
         showToast({
-          message: "Session closed.Tell us about your experience. ",
+          message: "Session closed. Share your experience. ",
           bgColor: "linear-gradient(to right, #b2069b, #3909c2)",
           fontColor: "white",
           duration: 3000,
+          icon: "info"
         });
 
         const exitBody = {
@@ -434,8 +453,8 @@ const Customer = () => {
             bgColor: "linear-gradient(to right, #b2069b, #3909c2)",
             fontColor: "#fff",
             duration: 5000,
+            icon: "info"
           });
-          navigate("/feedback");
           GetCustomerData();
         }
         setOpen(false);
@@ -453,6 +472,7 @@ const Customer = () => {
         bgColor: "linear-gradient(to right, #b2069b, #3909c2)",
         fontColor: "#fff",
         duration: 5000,
+        icon: "warr"
       });
       return;
     }
@@ -612,8 +632,8 @@ const Customer = () => {
   }, [openMenu]);
 
   const version = sessionStorage.getItem("AppVer");
-  const SpVerShow =  sessionStorage.getItem("SpVer");
-  
+  const SpVerShow = sessionStorage.getItem("SpVer");
+
   return (
     <div className="CustomerMain">
       <LoadingBackdrop isLoading={loading} />
@@ -868,238 +888,317 @@ const Customer = () => {
               paddingRight: "7px",
             }}
           >
-            <Button
-              className="AddCustomer_Btn"
-              onClick={handleNaviagte}
-              variant="contained"
-            >
-              <Plus />
-            </Button>
+            {hasAccess(-1036) && (
+              <Button
+                className="AddCustomer_Btn"
+                onClick={handleNaviagte}
+                variant="contained"
+              >
+                <Plus />
+              </Button>
+            )}
           </div>
         </div>
       </div>
 
-      <div
-        style={{
-          boxShadow:
-            "rgba(0, 0, 0, 0.1) 0px 0px 5px 0px, rgba(0, 0, 0, 0.1) 0px 0px 1px 0px",
-          display: "flex",
-          alignItems: "center",
-          justifyContent: "space-between",
-          position: "fixed",
-          top: "55px",
-          zIndex: zIndexValue,
-          padding: "7px",
-          width: "100%",
-          backgroundColor: "white",
-        }}
-      >
-        <p
+      {pageAccessData !== null && hasAccess(-1035) && (
+        <div
           style={{
-            fontSize: "17px",
-            color: "#783eb5",
-            fontWeight: 600,
-            margin: "0px",
+            boxShadow: "rgba(0, 0, 0, 0.1) 0px 0px 5px 0px, rgba(0, 0, 0, 0.1) 0px 0px 1px 0px",
+            position: "fixed",
+            top: "55px",
+            zIndex: zIndexValue,
+            width: "100%",
+            backgroundColor: "white",
           }}
         >
-          Customer List
-        </p>
-        <Button
-          className="AddCustomer_refresh_Btn"
-          onClick={GetCustomerData}
-          variant="contained"
-        >
-          <RotateCcw />
-        </Button>
-      </div>
+          {/* Title + Refresh Row */}
+          <div style={{
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "space-between",
+            padding: "7px 7px 4px 7px",
+          }}>
+            <p style={{ fontSize: "17px", color: "#783eb5", fontWeight: 600, margin: 0 }}>
+              Customer List
+            </p>
+            <Button
+              className="AddCustomer_refresh_Btn"
+              onClick={GetCustomerData}
+              variant="contained"
+            >
+              <RotateCcw />
+            </Button>
+          </div>
 
-      {!loading &&
-        (filteredData?.length !== 0 ? (
-          <div className="CustomerContainer">
-            <div className="CustomerList">
-              {sortedData?.map((cust, i) => {
-                const isExpanded = expandedCustomerId === cust.CustomerId;
-                return (
-                  <div
-                    key={i}
-                    className="customercard_button"
-                    ref={(el) => (cardRefs.current[cust.CustomerId] = el)}
-                    onClick={(e) => {
-                      // navigate(`/JobScanPage`);
-                      const button = e.currentTarget;
-                      const circle = document.createElement("span");
-                      const diameter = Math.max(
-                        button.clientWidth,
-                        button.clientHeight
-                      );
-                      const radius = diameter / 2;
+          {/* ✅ Search Box */}
+          <div style={{ padding: "0 7px 8px 7px" }}>
+            <div style={{
+              display: "flex",
+              alignItems: "center",
+              backgroundColor: "#f0f0f0",
+              borderRadius: "10px",
+              padding: "6px 12px",
+              gap: 8,
+            }}>
+              {/* Search Icon */}
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#999" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                <circle cx="11" cy="11" r="8" />
+                <line x1="21" y1="21" x2="16.65" y2="16.65" />
+              </svg>
 
-                      circle.style.width =
-                        circle.style.height = `${diameter}px`;
-                      circle.style.left = `${e.clientX - button.offsetLeft - radius
-                        }px`;
-                      circle.style.top = `${e.clientY - button.offsetTop - radius
-                        }px`;
-                      circle.classList.add("ripple");
+              <input
+                type="text"
+                placeholder="Search customer..."
+                value={search}
+                onChange={(e) => {
+                  const val = e.target.value;
+                  setSearch(val);
+                  if (val.trim() === "") {
+                    setResult([]);
+                  } else {
+                    const filtered = mainData.filter((item) =>
+                      `${item.firstname} ${item.lastname}`
+                        .toLowerCase()
+                        .includes(val.toLowerCase()) ||
+                      item.contactNumber?.toString().includes(val)
+                    );
+                    setResult(filtered);
+                  }
+                }}
+                style={{
+                  flex: 1,
+                  border: "none",
+                  outline: "none",
+                  backgroundColor: "transparent",
+                  fontSize: "14px",
+                  color: "#333",
+                }}
+              />
 
-                      // Remove old ripple if exists
-                      const ripple = button.getElementsByClassName("ripple")[0];
-                      if (ripple) {
-                        ripple.remove();
-                      }
+              {/* ✅ Clear button */}
+              {search.length > 0 && (
+                <div
+                  onClick={handleClearSearch}
+                  style={{ cursor: "pointer", display: "flex", alignItems: "center" }}
+                >
+                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#999" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                    <line x1="18" y1="6" x2="6" y2="18" />
+                    <line x1="6" y1="6" x2="18" y2="18" />
+                  </svg>
+                </div>
+              )}
+            </div>
+          </div>
+        </div>
+      )}
 
-                      button.appendChild(circle);
+      {!loading && pageAccessData !== null && (
+        hasAccess(-1035) ? (
+          filteredData?.length !== 0 ? (
+            <div className="CustomerContainer">
+              <div className="CustomerList">
+                {sortedData?.map((cust, i) => {
+                  const isExpanded = expandedCustomerId === cust.CustomerId;
+                  return (
+                    <div
+                      key={i}
+                      className="customercard_button"
+                      ref={(el) => (cardRefs.current[cust.CustomerId] = el)}
+                      onClick={(e) => {
+                        // navigate(`/JobScanPage`);
+                        const button = e.currentTarget;
+                        const circle = document.createElement("span");
+                        const diameter = Math.max(
+                          button.clientWidth,
+                          button.clientHeight
+                        );
+                        const radius = diameter / 2;
 
-                      if (cust.IsLockTimer === 0 || cust.IsLockTimer === 2) {
-                        toggleExpand(cust.CustomerId);
-                      } else {
-                        handleClickStatus(cust);
-                      }
-                    }}
-                    style={{
-                      backgroundColor: cust.IsLockTimer === 2 && "#e4f0df",
-                    }}
-                  >
-                    <div className="card-header">
-                      <div>
-                        <h5>{`${cust.firstname} ${cust.lastname}`}</h5>
-                        <p className="text-muted">{cust.contactNumber}</p>
-                      </div>
+                        circle.style.width =
+                          circle.style.height = `${diameter}px`;
+                        circle.style.left = `${e.clientX - button.offsetLeft - radius
+                          }px`;
+                        circle.style.top = `${e.clientY - button.offsetTop - radius
+                          }px`;
+                        circle.classList.add("ripple");
 
-                      <div className="status-badge-container">
-                        {cust.IsLockTimer === 0 && (
-                          <div className="status-row">
-                            <span className="dot available" />
-                          </div>
-                        )}
+                        // Remove old ripple if exists
+                        const ripple = button.getElementsByClassName("ripple")[0];
+                        if (ripple) {
+                          ripple.remove();
+                        }
 
-                        {cust.IsLockTimer === 1 && (
-                          <span className="status-badge in-session">
-                            <AiOutlineLock style={{ marginRight: "5px" }} />
-                            In Session
-                          </span>
-                        )}
+                        button.appendChild(circle);
 
-                        {cust.IsLockTimer === 2 && (
-                          <div
-                            className="status-row"
-                            style={{
-                              display: "flex",
-                              flexDirection: "column",
-                              alignItems: "flex-end",
-                            }}
-                          >
-                            <span
-                              className="expand-icon"
-                              onClick={() => handleClickStatus(cust)}
+                        if (cust.IsLockTimer === 0 || cust.IsLockTimer === 2) {
+                          toggleExpand(cust.CustomerId);
+                        } else {
+                          handleClickStatus(cust);
+                        }
+                      }}
+                      style={{
+                        backgroundColor: cust.IsLockTimer === 2 && "#e4f0df",
+                      }}
+                    >
+                      <div className="card-header">
+                        <div>
+                          <h5>{`${cust.firstname} ${cust.lastname}`}</h5>
+                          <p className="text-muted">{cust.contactNumber}</p>
+                        </div>
+
+                        <div className="status-badge-container">
+                          {cust.IsLockTimer === 0 && (
+                            <div className="status-row">
+                              <span className="dot available" />
+                            </div>
+                          )}
+
+                          {cust.IsLockTimer === 1 && (
+                            <span className="status-badge in-session">
+                              <AiOutlineLock style={{ marginRight: "5px" }} />
+                              In Session
+                            </span>
+                          )}
+
+                          {cust.IsLockTimer === 2 && (
+                            <div
+                              className="status-row"
                               style={{
-                                padding: "4px",
-                                borderRadius: "3px",
-                                width: "30px",
                                 display: "flex",
-                                justifyContent: "flex-end",
+                                flexDirection: "column",
+                                alignItems: "flex-end",
                               }}
                             >
-                              <AiOutlineRight color="black" />
-                            </span>
-                            <span className="timer-text">
-                              <AiOutlineClockCircle />
-                              {formatSecondsToTime(
-                                timers[cust.CustomerId] ?? 0
-                              )}
-                            </span>
-                          </div>
-                        )}
-                      </div>
-                    </div>
-
-                    <div
-                      ref={(el) =>
-                        (expandedSectionRefs.current[cust.CustomerId] = el)
-                      }
-                      className={`expand-wrapper ${isExpanded ? "show" : ""}`}
-                    >
-                      {cust.IsLockTimer === 0 && (
-                        <div className="expand-actions">
-                          <Button
-                            size="small"
-                            danger
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              handleStop(cust);
-                              setEndReleseCust("releseCustomer");
-                            }}
-                            style={{
-                              color: "white",
-                              backgroundColor: "#811bdb",
-                            }}
-                          >
-                            Remove From List
-                          </Button>
-
-                          <Button
-                            size="small"
-                            type="primary"
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              handleClickStatus(cust);
-                            }}
-                            style={{
-                              color: "white",
-                              backgroundColor: "#811bdb",
-                            }}
-                          >
-                            Start Session
-                          </Button>
+                              <span
+                                className="expand-icon"
+                                onClick={() => handleClickStatus(cust)}
+                                style={{
+                                  padding: "4px",
+                                  borderRadius: "3px",
+                                  width: "30px",
+                                  display: "flex",
+                                  justifyContent: "flex-end",
+                                }}
+                              >
+                                <AiOutlineRight color="black" />
+                              </span>
+                              <span className="timer-text">
+                                <AiOutlineClockCircle />
+                                {formatSecondsToTime(
+                                  timers[cust.CustomerId] ?? 0
+                                )}
+                              </span>
+                            </div>
+                          )}
                         </div>
-                      )}
+                      </div>
 
-                      {cust.IsLockTimer === 2 && (
-                        <div
-                          style={{
-                            display: "flex",
-                            justifyContent: "flex-end",
-                          }}
-                        >
-                          {!stopped[cust.CustomerId] && (
+                      <div
+                        ref={(el) =>
+                          (expandedSectionRefs.current[cust.CustomerId] = el)
+                        }
+                        className={`expand-wrapper ${isExpanded ? "show" : ""}`}
+                      >
+                        {cust.IsLockTimer === 0 && (
+                          <div className="expand-actions">
                             <Button
                               size="small"
                               danger
                               onClick={(e) => {
                                 e.stopPropagation();
                                 handleStop(cust);
-                                setEndReleseCust("endCustomer");
+                                setEndReleseCust("releseCustomer");
+                                sessionStorage.setItem("currentfeedBack", JSON.stringify(cust));
                               }}
                               style={{
                                 color: "white",
                                 backgroundColor: "#811bdb",
                               }}
                             >
-                              Exit Customer
+                              Remove From List
                             </Button>
-                          )}
-                        </div>
-                      )}
+
+                            <Button
+                              size="small"
+                              type="primary"
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                handleClickStatus(cust);
+                              }}
+                              style={{
+                                color: "white",
+                                backgroundColor: "#811bdb",
+                              }}
+                            >
+                              Start Session
+                            </Button>
+                          </div>
+                        )}
+
+                        {cust.IsLockTimer === 2 && (
+                          <div
+                            style={{
+                              display: "flex",
+                              justifyContent: "flex-end",
+                            }}
+                          >
+                            {!stopped[cust.CustomerId] && (
+                              <Button
+                                size="small"
+                                danger
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  handleStop(cust);
+                                  setEndReleseCust("endCustomer");
+                                  sessionStorage.setItem("currentfeedBack", JSON.stringify(cust));
+                                }}
+                                style={{
+                                  color: "white",
+                                  backgroundColor: "#811bdb",
+                                }}
+                              >
+                                Exit Customer
+                              </Button>
+                            )}
+                          </div>
+                        )}
+                      </div>
                     </div>
-                  </div>
-                );
-              })}
+                  );
+                })}
+              </div>
             </div>
+          ) : (
+            <div
+              style={{
+                height: "80vh",
+                display: "flex",
+                justifyContent: "center",
+                alignItems: "center",
+              }}
+            >
+              <h6 class="MuiTypography-root MuiTypography-h6 css-32t4mj-MuiTypography-root">
+                No Customer Available{" "}
+              </h6>
+            </div>
+          ))
+          :
+          <div style={{
+            display: 'flex', flexDirection: 'column', alignItems: 'center',
+            justifyContent: 'center', minHeight: '60vh', textAlign: 'center', padding: '32px 20px'
+          }}>
+            <svg width="64" height="64" viewBox="0 0 24 24" fill="none" style={{ marginBottom: 16 }}>
+              <circle cx="12" cy="12" r="11" stroke="#e0e0e0" strokeWidth="1.5" />
+              <path d="M8 11V8a4 4 0 1 1 8 0v3" stroke="#bdbdbd" strokeWidth="1.5" strokeLinecap="round" />
+              <rect x="5" y="11" width="14" height="9" rx="2" fill="#f5f5f5" stroke="#bdbdbd" strokeWidth="1.5" />
+              <circle cx="12" cy="15.5" r="1.5" fill="#bdbdbd" />
+            </svg>
+            <div style={{ fontSize: 18, fontWeight: 700, color: '#555', marginBottom: 8 }}>No Page Access</div>
+            <div style={{ fontSize: 13, color: '#999' }}>You do not have permission to view this page.</div>
           </div>
-        ) : (
-          <div
-            style={{
-              height: "80vh",
-              display: "flex",
-              justifyContent: "center",
-              alignItems: "center",
-            }}
-          >
-            <h6 class="MuiTypography-root MuiTypography-h6 css-32t4mj-MuiTypography-root">
-              No Customer Available{" "}
-            </h6>
-          </div>
-        ))}
+      )}
+
     </div>
   );
 };

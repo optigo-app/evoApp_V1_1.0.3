@@ -6,8 +6,8 @@ let _showToast;
 export const ToastContainer = () => {
   const [toast, setToast] = useState(null);
 
-  _showToast = useCallback(({ message, bgColor, fontColor, duration }) => {
-    setToast({ message, bgColor, fontColor, duration });
+  _showToast = useCallback(({ message, bgColor, fontColor, duration , icon }) => {
+    setToast({ message, bgColor, fontColor, duration , icon });
   }, []);
 
   const handleClose = () => setToast(null);
@@ -20,14 +20,15 @@ export const ToastContainer = () => {
       bgColor={toast.bgColor}
       fontColor={toast.fontColor}
       duration={toast.duration}  // pass duration here
+      icon={toast.icon}  // pass duration here
       onClose={handleClose}
     />
   );
 };
 
-export const showToast = ({ message, bgColor, fontColor, duration }) => {
+export const showToast = ({ message, bgColor, fontColor, duration , icon}) => {
   if (_showToast) {
-    _showToast({ message, bgColor, fontColor, duration });
+    _showToast({ message, bgColor, fontColor, duration , icon});
   } else {
     console.warn("ToastContainer is not mounted yet.");
   }

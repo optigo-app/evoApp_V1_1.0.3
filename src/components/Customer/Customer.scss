@@ -125,7 +125,7 @@
   }
 
   .CustomerContainer {
-    padding: 120px 10px 10px 10px;
+    padding: 160px 10px 10px 10px;
 
     .CustomerSearch {
       margin-bottom: 10px;
@@ -160,7 +160,7 @@
     .CustomerList {
       display: flex;
       flex-direction: column;
-      gap: 10px;
+      gap: 5px;
 
       .customercard_button {
         width: 100% !important;

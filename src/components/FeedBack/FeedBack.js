@@ -105,6 +105,7 @@ const FeedBack = () => {
 
   const handleSave = async () => {
     const Device_Token = sessionStorage.getItem("device_token");
+    const cuurentData = JSON.parse(sessionStorage.getItem("currentfeedBack"));
     const feedbackArray = Object.keys(answers).map((qid) => ({
       QuestionId: qid,
       OptionId: answers[qid].OptionId || "",
@@ -119,7 +120,7 @@ const FeedBack = () => {
           ForEvt: "SaveFeedback",
           DeviceToken: Device_Token,
           AppId: 3,
-          CustomerId: activeCust?.CustomerId,
+          CustomerId: cuurentData?.CustomerId,
           FeedbackData: feedbackArray,
         },
       ]),
@@ -128,8 +129,9 @@ const FeedBack = () => {
     showToast({
       message: "Feedback saved successfully!",
       bgColor: "linear-gradient(to right, #b2069b, #3909c2)",
-            fontColor: "white",
+      fontColor: "white",
       duration: 3000,
+      icon: "success"
     });
     setTimeout(() => {
       navigate("/");
@@ -177,7 +179,7 @@ const FeedBack = () => {
         </DialogActions>
       </Dialog>
       <LoadingBackdrop isLoading={loading} />
-      
+
       <header className="fb-appbar">
         <button className="fb-appbar__back" onClick={() => navigate("/")}>
           <ChevronLeft size={22} />

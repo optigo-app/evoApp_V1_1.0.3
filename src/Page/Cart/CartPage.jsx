@@ -22,6 +22,14 @@ const CartPage = () => {
   const [opencnfDialogOpenEstiate, setOpenCnfDialogEstimate] = useState(false);
   const [selectedItems, setSelectedItems] = useState([]);
   const [rmflag, setRmFlag] = useState("");
+  const pageAccessData = JSON.parse(
+    sessionStorage.getItem("pageAccessData") || "[]"
+  );
+
+  const hasAccess = (pageId) =>
+    pageAccessData.some(
+      (p) => p.id === pageId && Number(p.isVisiable) === 1
+    );
 
   const handleOpenDialog = (cartItems, flag) => {
     setRmFlag(flag)
@@ -45,9 +53,10 @@ const CartPage = () => {
       localStorage.setItem("AllScanJobData", JSON.stringify(allScanJobData));
       showToast({
         message: "Item removed from cart",
-     bgColor: "linear-gradient(to right, #b2069b, #3909c2)",
-            fontColor: "white",
+        bgColor: "linear-gradient(to right, #b2069b, #3909c2)",
+        fontColor: "white",
         duration: 3000,
+        icon: "remove"
       });
     }
     setIsLoading(false);
@@ -67,9 +76,10 @@ const CartPage = () => {
       localStorage?.setItem("AllScanJobData", JSON?.stringify(allScanJobData));
       showToast({
         message: "Items removed from cart",
-       bgColor: "linear-gradient(to right, #b2069b, #3909c2)",
-            fontColor: "white",
+        bgColor: "linear-gradient(to right, #b2069b, #3909c2)",
+        fontColor: "white",
         duration: 3000,
+        icon: "remove"
       });
     }
     setIsLoading(false);
@@ -113,22 +123,31 @@ const CartPage = () => {
         "AllScanJobData",
         JSON.stringify(allScanJobData)
       );
+
+      localStorage.setItem(
+        "movedBillJob",
+        JSON.stringify(cartJobNos)
+      );
+
       navigate("/orderSuccess", { replace: true });
     } else if (res?.DT[0]?.stat_msg == "Job Already Move To Bill") {
       showToast({
         message: "Job Already Move To Bill",
-      bgColor: "linear-gradient(to right, #b2069b, #3909c2)",
-            fontColor: "white",
+        bgColor: "linear-gradient(to right, #b2069b, #3909c2)",
+        fontColor: "white",
         duration: 3000,
+        icon: "info"
       });
     } else {
       showToast({
         message: "Failed to move to billing",
-     bgColor: "linear-gradient(to right, #b2069b, #3909c2)",
-            fontColor: "white",
+        bgColor: "linear-gradient(to right, #b2069b, #3909c2)",
+        fontColor: "white",
         duration: 3000,
+        icon: "warr"
       });
     }
+    sessionStorage.setItem('shareorprintData', JSON.stringify(cartItems));
   }
 
   const handleGeneretEstimate = async () => {
@@ -165,13 +184,17 @@ const CartPage = () => {
           </Suspense>
           <Box className="CartActionsFooter">
             <Stack direction="row" spacing={1} justifyContent="center" className="action-buttons">
-              <Button variant="outlined" startIcon={<Printer size={18} />}
-                onClick={() => setOpenCnfDialogEstimate(true)}>
-                Generate Estimates
-              </Button>
-              <Button variant="outlined" startIcon={<ScrollText size={18} />} onClick={handleMoveToBill}>
-                Move to Billing
-              </Button>
+              {hasAccess(-1045) && (
+                <Button variant="outlined" startIcon={<Printer size={18} />}
+                  onClick={() => setOpenCnfDialogEstimate(true)}>
+                  Generate Estimates
+                </Button>
+              )}
+              {hasAccess(-1046) && (
+                <Button variant="outlined" startIcon={<ScrollText size={18} />} onClick={handleMoveToBill}>
+                  Move to Billing
+                </Button>
+              )}
             </Stack>
           </Box>
         </>

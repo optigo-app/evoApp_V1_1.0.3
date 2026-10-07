@@ -50,8 +50,9 @@ const CartPage = () => {
       showToast({
         message: "Item removed from cart",
         bgColor: "linear-gradient(to right, #b2069b, #3909c2)",
-            fontColor: "white",
+        fontColor: "white",
         duration: 3000,
+        icon: "remove"
       });
     }
     setIsLoading(false);
@@ -71,9 +72,10 @@ const CartPage = () => {
       localStorage?.setItem("AllScanJobData", JSON?.stringify(allScanJobData));
       showToast({
         message: "Items removed from cart",
-       bgColor: "linear-gradient(to right, #b2069b, #3909c2)",
-            fontColor: "white",
+        bgColor: "linear-gradient(to right, #b2069b, #3909c2)",
+        fontColor: "white",
         duration: 3000,
+        icon: "remove"
       });
     }
     setIsLoading(false);
@@ -118,20 +120,22 @@ const CartPage = () => {
         JSON.stringify(allScanJobData)
       );
       navigate("/orderSuccess", { replace: true });
-      
+
     } else if (res?.DT[0]?.stat_msg == "Job Already Move To Bill") {
       showToast({
         message: "Job Already Move To Bill",
-  bgColor: "linear-gradient(to right, #b2069b, #3909c2)",
-            fontColor: "white",
+        bgColor: "linear-gradient(to right, #b2069b, #3909c2)",
+        fontColor: "white",
         duration: 3000,
+        icon: "info"
       });
     } else {
       showToast({
         message: "Failed to move to billing",
-      bgColor: "linear-gradient(to right, #b2069b, #3909c2)",
-            fontColor: "white",
+        bgColor: "linear-gradient(to right, #b2069b, #3909c2)",
+        fontColor: "white",
         duration: 3000,
+        icon: "warr"
       });
     }
   }

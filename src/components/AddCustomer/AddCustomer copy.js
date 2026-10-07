@@ -1,8 +1,24 @@
-import React, { useState } from "react";
-import { House, X } from "lucide-react";
-import { CallApi } from "./API/CallApi/CallApi";
-import { showToast } from "./Utils/Tostify/ToastManager";
-import '../src/components/AddCustomer/AddCustomer.scss'
+import React, { useState, useEffect } from "react";
+import "./AddCustomer.scss";
+import {
+  Button,
+  Modal,
+  Box,
+  TextField,
+  Collapse,
+  Typography,
+  Link,
+  IconButton,
+  Divider,
+  Select,
+  MenuItem,
+  InputAdornment,
+} from "@mui/material";
+import { useNavigate } from "react-router-dom";
+import { House, Save, UserPlus, X } from "lucide-react";
+import LoadingBackdrop from "../../Utils/LoadingBackdrop";
+import { showToast } from "../../Utils/Tostify/ToastManager";
+import { CallApi } from "../../API/CallApi/CallApi";
 
 const AddCustomer = () => {
   const [input, setInput] = useState("");
@@ -12,6 +28,10 @@ const AddCustomer = () => {
   const [loading, setLoading] = useState(false);
   const [formErrors, setFormErrors] = useState({});
   const [error, setError] = useState("");
+  const navigate = useNavigate();
+
+  const [countryList, setCountryList] = useState([]);
+  const [selectedCountry, setSelectedCountry] = useState(null);
 
   const [form, setForm] = useState({
     firstName: "",
@@ -26,6 +46,35 @@ const AddCustomer = () => {
     fullAddress: "",
   });
 
+  // Load MobileCountryCode master data once on mount:
+  // - Dropdown list only shows entries where IsActive === 1
+  // - Default selected entry is the one where IsDefault === 1
+  //   (falls back to the first active entry if none is marked default)
+  useEffect(() => {
+    let masterData = [];
+    try {
+      masterData =
+        JSON.parse(sessionStorage.getItem("MobileCountryCode")) || [];
+    } catch (e) {
+      masterData = [];
+    }
+
+    const activeCountries = (masterData || []).filter(
+      (c) => Number(c.IsActive) === 1
+    );
+
+    const defaultCountry =
+      activeCountries.find((c) => Number(c.IsDefault) === 1) ||
+      masterData.find((c) => Number(c.IsDefault) === 1) ||
+      activeCountries[0] ||
+      null;
+
+    setCountryList(activeCountries);
+    setSelectedCountry(defaultCountry);
+  }, []);
+
+  const phoneLength = selectedCountry?.PhoneLength || 10;
+
   const handleSearch = async () => {
     setLoading(false);
     const trimmedInput = input.trim();
@@ -35,10 +84,10 @@ const AddCustomer = () => {
     }
 
     const isEmail = /^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$/.test(trimmedInput);
-    const isMobile = /^[0-9]{10}$/.test(trimmedInput);
+    const isMobile = new RegExp(`^[0-9]{${phoneLength}}$`).test(trimmedInput);
 
     if (!isEmail && !isMobile) {
-      setError("Please enter a valid mobile number or email.");
+      setError(`Please enter a valid ${phoneLength}-digit mobile number or email.`);
       return;
     }
 
@@ -87,6 +136,7 @@ const AddCustomer = () => {
         bgColor: "linear-gradient(to right, #b2069b, #3909c2)",
         fontColor: "#fff",
         duration: 5000,
+        icon: "info"
       });
       setFoundCustomer(response?.DT[0]);
     }
@@ -107,13 +157,31 @@ const AddCustomer = () => {
     }));
   };
 
+  // Called when the user picks a different country code from the dropdown
+  const handleCountryChange = (e) => {
+    const countryId = e.target.value;
+    const country = countryList.find((c) => c.id === countryId) || null;
+    setSelectedCountry(country);
+
+    // Trim the currently entered mobile number to the new country's PhoneLength
+    setForm((prevForm) => ({
+      ...prevForm,
+      mobile: prevForm.mobile.slice(0, country?.PhoneLength || 10),
+    }));
+
+    setFormErrors((prevErrors) => ({
+      ...prevErrors,
+      mobile: "",
+    }));
+  };
+
   const handleModalSave = async () => {
     const errors = {};
 
     // Regex definitions
     const nameRegex = /^[A-Za-z\s]{2,50}$/;
     const lastNameRegex = /^[A-Za-z\s]{0,50}$/;
-    const mobileRegex = /^\d{10}$/;
+    const mobileRegex = new RegExp(`^\\d{${phoneLength}}$`);
     const emailRegex = /^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$/;
     const cityRegex = /^[A-Za-z\s]{2,50}$/;
     const areaRegex = /^[A-Za-z0-9\s]{2,100}$/;
@@ -135,7 +203,7 @@ const AddCustomer = () => {
     if (!form.mobile.trim()) {
       errors.mobile = "Mobile number is required";
     } else if (!mobileRegex.test(form.mobile.trim())) {
-      errors.mobile = "Enter a valid 10-digit mobile number";
+      errors.mobile = `Enter a valid ${phoneLength}-digit mobile number`;
     }
 
     if (!form.email.trim()) {
@@ -156,9 +224,9 @@ const AddCustomer = () => {
       errors.area = "Alphanumeric + spaces (2–100 chars)";
     }
 
-    if (form.pincode && !pincodeRegex.test(form.pincode.trim())) {
-      errors.pincode = "Enter 5 or 6 digit pincode";
-    }
+    // if (form.pincode && !pincodeRegex.test(form.pincode.trim())) {
+    //   errors.pincode = "Enter 5 or 6 digit pincode";
+    // }
 
     if (form.fullAddress && !addressRegex.test(form.fullAddress.trim())) {
       errors.fullAddress = "Address should be 5–200 characters";
@@ -175,12 +243,14 @@ const AddCustomer = () => {
       const Device_Token = sessionStorage.getItem("device_token");
       const reqData = [
         {
-          ForEvt: "CutomerRegister",
+          ForEvt: "CustomerRegister",
           DeviceToken: Device_Token,
           AppId: "3",
           FirstName: form.firstName,
           LastName: form.lastName,
           CustMobile: form.mobile,
+          MobileCountryCode: selectedCountry?.mobileprefix || "",
+          Mobile_Countryid: selectedCountry?.id || "",
           CustEmail: form.email,
           Area: form.area,
           City: form.city,
@@ -192,7 +262,7 @@ const AddCustomer = () => {
       ];
 
       const body = {
-        Mode: "CutomerRegister",
+        Mode: "CustomerRegister",
         Token: `"${Device_Token}"`,
         ReqData: JSON.stringify(reqData),
       };
@@ -248,21 +318,24 @@ const AddCustomer = () => {
             showToast({
               message: "Customer Session Start",
               bgColor: "linear-gradient(to right, #b2069b, #3909c2)",
-              fontColor: "#fff",
+              fontColor: "white",
               duration: 5000,
+              icon: "success"
             });
           }
           setLoading(false);
         }
+        navigate(`/JobScanPage`);
         setLoading(false);
         setOpenModal(false);
       } else {
         setLoading(false);
         showToast({
           message: response?.DT[0]?.stat_msg,
-          bgColor: response?.DT[0]?.stat == 0 ? "red" : "#4caf50",
+          bgColor: "linear-gradient(to right, #b2069b, #3909c2)",
           fontColor: "#fff",
           duration: 5000,
+          icon: "remove"
         });
       }
 
@@ -293,12 +366,6 @@ const AddCustomer = () => {
     };
     const response = await CallApi(body);
     if (response?.DT[0]?.stat == 1) {
-      // showToast({
-      //   message: "Now Customer OnFloor End Session Start",
-      //   bgColor: "#4caf50",
-      //   fontColor: "#fff",
-      //   duration: 5000,
-      // });
       localStorage.removeItem("AllScanJobData");
 
       const body = {
@@ -318,17 +385,12 @@ const AddCustomer = () => {
       const response = await CallApi(body);
       setLoading(false);
       if (response?.DT[0]?.stat == 1) {
-        // showToast({
-        //   message: "Customer Session Start",
-        //   bgColor: "#4caf50",
-        //   fontColor: "#fff",
-        //   duration: 5000,
-        // });
         showToast({
           message: "Session Started Customer on Floor",
           bgColor: "linear-gradient(to right, #b2069b, #3909c2)",
           fontColor: "#fff",
           duration: 5000,
+          icon: "success"
         });
         sessionStorage.setItem(
           "curruntActiveCustomer",
@@ -336,20 +398,23 @@ const AddCustomer = () => {
         );
       }
     }
+    navigate(`/JobScanPage`);
   };
 
   return (
     <div className="AddCustomerContainer">
+      <LoadingBackdrop isLoading={loading} />
       <div className="Header_main">
         <div className="header-container">
           <p className="header_title">Add Customer</p>
           <div style={{ display: "flex", gap: "15px" }}>
-            <button
+            <Button
               className="AddCustomer_Btn"
+              onClick={() => navigate("/")}
               variant="contained"
             >
               <House />
-            </button>
+            </Button>
           </div>
         </div>
       </div>
@@ -376,9 +441,9 @@ const AddCustomer = () => {
 
           <div style={{ marginTop: "30px" }}>
             <p style={{ margin: "0px", fontSize: "14px", fontWeight: 600 }}>
-              Please Enter Valid Mobile Or Email
+              Enter mobile number or email
             </p>
-            <input
+            <TextField
               fullWidth
               variant="outlined"
               value={input}
@@ -390,16 +455,16 @@ const AddCustomer = () => {
               helperText={error}
             />
           </div>
-          <button className="addFormBtn" onClick={handleSearch}>
-            Save
-          </button>
+          <Button className="addFormBtn" onClick={handleSearch}>
+            Processed
+          </Button>
         </div>
 
         {foundCustomer && (
           <div className="result-section">
             <h4>Available Customer</h4>
 
-            <button
+            <Button
               className="customercard_button"
               onClick={() => handleNaviagte(foundCustomer)}
             >
@@ -419,186 +484,204 @@ const AddCustomer = () => {
                   Click To Select
                 </p>
               </div>
-            </button>
+            </Button>
           </div>
         )}
-{/* 
+
         <Modal
           open={openModal}
           onClose={() => setOpenModal(false)}
-          style={{ outline: "none" }}
+          disableRestoreFocus
+          sx={{
+            outline: "none",
+            alignItems: "flex-end",
+            display: "flex",
+            justifyContent: "center",
+          }}
         >
           <Box className="addCustomer_modalbox">
-            <p style={{ fontSize: "19px", fontWeight: 600 }}>
-              Add New Customer
-            </p>
-            <button
-              onClick={() => setOpenModal(false)}
-              style={{
-                position: "absolute",
-                right: "15px",
-                top: "10px",
-                color: "black",
-                margin: "0px",
-                padding: "0px",
-                minWidth: "25px",
-                height: "25px",
-                border: "1px solid black",
-                borderRadius: "20px",
-              }}
-            >
-              <X />
-            </button>
-
-            <input
-              fullWidth
-              label="First Name"
-              name="firstName"
-              value={form.firstName}
-              onChange={handleFormChange}
-              margin="dense"
-              error={!!formErrors.firstName}
-              helperText={formErrors.firstName}
-              sx={{
-                "& .MuiFormHelperText-root": {
-                  marginLeft: "0px !important",
-                },
-              }}
-            />
-
-            <input
-              fullWidth
-              label="Last Name"
-              name="lastName"
-              value={form.lastName}
-              onChange={handleFormChange}
-              margin="dense"
-              error={!!formErrors.lastName}
-              helperText={formErrors.lastName}
-              sx={{
-                "& .MuiFormHelperText-root": {
-                  marginLeft: "0px !important",
-                },
-              }}
-            />
-
-            <input
-              fullWidth
-              label="Email"
-              name="email"
-              value={form.email}
-              onChange={handleFormChange}
-              margin="dense"
-              error={!!formErrors.email}
-              helperText={formErrors.email}
-              sx={{
-                "& .MuiFormHelperText-root": {
-                  marginLeft: "0px !important",
-                },
-              }}
-            />
-
-            <input
-              fullWidth
-              label="Mobile"
-              name="mobile"
-              value={form.mobile}
-              onChange={handleFormChange}
-              margin="dense"
-              error={!!formErrors.mobile}
-              helperText={formErrors.mobile}
-              sx={{
-                "& .MuiFormHelperText-root": {
-                  marginLeft: "0px !important",
-                },
-              }}
-            />
-
-            {!showMore && (
-              <Link
-                component="button"
-                variant="body2"
-                sx={{ mt: 1, mb: 1 }}
-                onClick={() => setShowMore(!showMore)}
+            <Box className="modal-header">
+              <Box className="modal-header__left">
+                <Box className="modal-header__icon">
+                  <UserPlus size={16} color="#2E7D32" />
+                </Box>
+                <Typography className="modal-header__title">
+                  Add new customer
+                </Typography>
+              </Box>
+              <IconButton
+                onClick={() => setOpenModal(false)}
+                className="modal-close-btn"
+                size="small"
               >
-                {showMore ? "Hide Extra Fields" : "Show More"}
-              </Link>
-            )}
+                <X size={14} />
+              </IconButton>
+            </Box>
 
-            <Collapse in={showMore}>
-              <input
-                fullWidth
-                label="Country"
-                name="country"
-                value={form.country}
-                onChange={handleFormChange}
-                margin="dense"
-              />
-              <input
-                fullWidth
-                label="State"
-                name="state"
-                value={form.state}
-                onChange={handleFormChange}
-                margin="dense"
-              />
-              <input
-                fullWidth
-                label="City"
-                name="city"
-                value={form.city}
-                onChange={handleFormChange}
-                margin="dense"
-              />
-              <input
-                fullWidth
-                label="Pincode"
-                name="pincode"
-                value={form.pincode}
-                onChange={handleFormChange}
-                margin="dense"
-              />
-              <input
-                fullWidth
-                label="Area"
-                name="area"
-                value={form.area}
-                onChange={handleFormChange}
-                margin="dense"
-              />
-              <input
-                fullWidth
-                label="Full Address"
-                name="fullAddress"
-                value={form.fullAddress}
-                onChange={handleFormChange}
-                margin="dense"
-              />
-            </Collapse>
+            {/* ── Scrollable Body ── */}
+            <Box className="modal-body">
 
-            {showMore && (
-              <Link
-                component="button"
-                variant="body2"
-                sx={{ mt: 1, mb: 1 }}
-                onClick={() => setShowMore(!showMore)}
+              <Typography className="section-label">Basic info</Typography>
+
+              {/* Name row */}
+              <Box className="field-row">
+                <TextField
+                  label="First name"
+                  name="firstName"
+                  value={form.firstName}
+                  onChange={handleFormChange}
+                  error={!!formErrors.firstName}
+                  helperText={formErrors.firstName}
+                  size="small"
+                  fullWidth
+                />
+                <TextField
+                  label="Last name"
+                  name="lastName"
+                  value={form.lastName}
+                  onChange={handleFormChange}
+                  error={!!formErrors.lastName}
+                  helperText={formErrors.lastName}
+                  size="small"
+                  fullWidth
+                />
+              </Box>
+
+              <TextField
+                fullWidth
+                label="Email address"
+                name="email"
+                value={form.email}
+                onChange={handleFormChange}
+                error={!!formErrors.email}
+                helperText={formErrors.email}
+                size="small"
+              />
+
+              {/* Mobile number with country-code dropdown */}
+              <TextField
+                fullWidth
+                label="Mobile number"
+                name="mobile"
+                value={form.mobile}
+                onChange={(e) => {
+                  const value = e.target.value.replace(/\D/g, ""); // allow only digits
+                  if (value.length <= phoneLength) {
+                    handleFormChange({
+                      target: { name: "mobile", value },
+                    });
+                  }
+                }}
+                error={!!formErrors.mobile}
+                helperText={
+                  formErrors.mobile ||
+                  `${form.mobile.length}/${phoneLength} digits`
+                }
+                size="small"
+                inputProps={{ inputMode: "numeric", maxLength: phoneLength }}
+                InputProps={{
+                  startAdornment: (
+                    <InputAdornment position="start" sx={{ mr: 0 }}>
+                      <Select
+                        variant="standard"
+                        disableUnderline
+                        value={selectedCountry?.id || ""}
+                        onChange={handleCountryChange}
+                        sx={{
+                          minWidth: 90,
+                          fontSize: "14px",
+                          "& .MuiSelect-select": { paddingRight: "24px !important" },
+                        }}
+                        renderValue={() =>
+                          selectedCountry
+                            ? `${selectedCountry.CountryShortName} +${selectedCountry.mobileprefix}`
+                            : "Select"
+                        }
+                      >
+                        {countryList.map((c) => (
+                          <MenuItem key={c.id} value={c.id}>
+                            {c.countryname} (+{c.mobileprefix})
+                          </MenuItem>
+                        ))}
+                      </Select>
+                    </InputAdornment>
+                  ),
+                }}
+              />
+
+              <Divider />
+
+              {/* Address section */}
+              <Typography className="section-label">
+                Address
+                <span className="section-label__optional"> — optional</span>
+              </Typography>
+
+              {!showMore && (
+                <Link
+                  component="button"
+                  underline="none"
+                  className="show-more-link"
+                  onClick={() => setShowMore(true)}
+                >
+                  + Show address fields
+                </Link>
+              )}
+
+              <Collapse in={showMore}>
+                <Box className="extra-fields">
+                  <Box className="field-row">
+                    <TextField label="Country" name="country" value={form.country}
+                      onChange={handleFormChange} size="small" fullWidth />
+                    <TextField label="State" name="state" value={form.state}
+                      onChange={handleFormChange} size="small" fullWidth />
+                  </Box>
+                  <Box className="field-row">
+                    <TextField label="City" name="city" value={form.city}
+                      onChange={handleFormChange} size="small" fullWidth />
+                    <TextField
+                      label="Pincode"
+                      name="pincode"
+                      value={form.pincode}
+                      onChange={(e) => {
+                        const value = e.target.value.replace(/\D/g, ""); // digits only
+                        handleFormChange({ target: { name: "pincode", value } });
+                      }}
+                      error={!!formErrors.pincode}
+                      helperText={formErrors.pincode}
+                      size="small"
+                      inputProps={{ inputMode: "numeric" }}
+                      fullWidth
+                    />
+                  </Box>
+                  <TextField fullWidth label="Area / Locality" name="area"
+                    value={form.area} onChange={handleFormChange} size="small" />
+                  <TextField fullWidth label="Full address" name="fullAddress"
+                    value={form.fullAddress} onChange={handleFormChange} size="small" />
+
+                  <Link component="button" underline="none"
+                    className="show-more-link show-more-link--hide"
+                    onClick={() => setShowMore(false)}>
+                    − Hide address fields
+                  </Link>
+                </Box>
+              </Collapse>
+
+            </Box>
+
+            <Box className="modal-footer">
+              <Button
+                variant="contained"
+                fullWidth
+                onClick={handleModalSave}
+                className="save-btn"
+                startIcon={<Save size={15} />}
               >
-                {showMore ? "Hide Extra Fields" : "Show More"}
-              </Link>
-            )}
-
-            <button
-              variant="contained"
-              color="success"
-              fullWidth
-              onClick={handleModalSave}
-              sx={{ mt: 2 }}
-              className="addFormBtn"
-            >
-              Save
-            </button>
+                Save & Start Session
+              </Button>
+            </Box>
           </Box>
-        </Modal> */}
+        </Modal>
       </div>
     </div>
   );

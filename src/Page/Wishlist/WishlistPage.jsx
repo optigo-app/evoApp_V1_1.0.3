@@ -79,6 +79,7 @@ const WishlistPage = () => {
         bgColor: "linear-gradient(to right, #b2069b, #3909c2)",
         fontColor: "white",
         duration: 3000,
+        icon: "remove"
       });
     }
     handleCloseDialog();
@@ -100,6 +101,7 @@ const WishlistPage = () => {
         bgColor: "linear-gradient(to right, #b2069b, #3909c2)",
         fontColor: "white",
         duration: 3000,
+        icon: "remove"
       });
     }
     setIsLoading(false);
@@ -135,6 +137,7 @@ const WishlistPage = () => {
           bgColor: "linear-gradient(to right, #b2069b, #3909c2)",
           fontColor: "white",
           duration: 3000,
+          icon: "remove"
         });
       }
     } else {
@@ -157,6 +160,7 @@ const WishlistPage = () => {
           bgColor: "linear-gradient(to right, #b2069b, #3909c2)",
           fontColor: "white",
           duration: 3000,
+          icon: "remove"
         });
 
         setSelectedItems(prev => prev.filter(item => item.id !== wishlistItem.id));
@@ -174,6 +178,7 @@ const WishlistPage = () => {
         bgColor: "linear-gradient(to right, #b2069b, #3909c2)",
         fontColor: "white",
         duration: 3000,
+        icon: "info"
       });
       return;
     }
@@ -190,6 +195,7 @@ const WishlistPage = () => {
         bgColor: "linear-gradient(to right, #b2069b, #3909c2)",
         fontColor: "white",
         duration: 3000,
+        icon: "success"
       });
       setSelectedItems([]);
     }

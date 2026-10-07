@@ -40,6 +40,12 @@ const DiscountModal = ({
     Misc: { value: "", type: "amount" },
   });
 
+  const hasCriteriaBreakup =
+    Number(activeDetail?.TotalMetalCost) > 0 ||
+    Number(activeDetail?.TotalDiamondCost) > 0 ||
+    Number(activeDetail?.TotalColorstoneCost) > 0 ||
+    Number(activeDetail?.TotalMiscCost) > 0;
+
   const criteriaList = [
     // { key: "metal", label: "Metal Amount" },
     { key: "diamond", label: "Diamond Amount" },
@@ -61,6 +67,14 @@ const DiscountModal = ({
   const originalPrice = activeDetail?.price || 0;
   const profileData = JSON.parse(sessionStorage.getItem("profileData"));
 
+
+  useEffect(() => {
+    if (!discountModalOpen) return;
+    if (!hasCriteriaBreakup) {
+      setDiscountMode("total");
+    }
+  }, [discountModalOpen, hasCriteriaBreakup]);
+
   useEffect(() => {
     if (!discountModalOpen || !activeDetail) return;
 
@@ -71,10 +85,19 @@ const DiscountModal = ({
       criteriaDiscount,
     } = activeDetail ?? {};
 
+    const defaultCriteria = {
+      metal: { value: "", type: "amount" },
+      diamond: { value: "", type: "amount" },
+      stone: { value: "", type: "amount" },
+      labour: { value: "", type: "amount" },
+      Solitaire: { value: "", type: "amount" },
+      Misc: { value: "", type: "amount" },
+    };
+
     setDiscountMode(adType === "criteria" ? "criteria" : "total");
 
+    // ✅ CASE 1: criteria exists → prefill
     if (adType === "criteria" && criteriaDiscount) {
-      // Prefill criteriaDiscounts state from saved criteriaDiscount
       const map = {
         Diamond: "diamond",
         Stone: "stone",
@@ -84,10 +107,13 @@ const DiscountModal = ({
         Misc: "Misc",
       };
 
-      const prefill = {};
-      Object.entries(map)?.forEach(([apiKey, stateKey]) => {
-        const value = criteriaDiscount[`${apiKey}Discount`] || 0;
-        const isAmount = criteriaDiscount[`Is${apiKey}DiscInAmount`] === 1;
+      const prefill = { ...defaultCriteria };
+
+      Object.entries(map).forEach(([apiKey, stateKey]) => {
+        const value = criteriaDiscount[`${apiKey}Discount`] || "";
+        const isAmount =
+          criteriaDiscount[`Is${apiKey}DiscInAmount`] === 1;
+
         prefill[stateKey] = {
           value: value,
           type: isAmount ? "amount" : "percentage",
@@ -98,9 +124,12 @@ const DiscountModal = ({
       setCalculatedPrice(Number(adPrice) || originalPrice);
       setDiscountValue(Number(adValue) || 0);
       setDirectPriceInput("");
-      setDiscountType("flat"); // criteria mode ignores this field
+      setDiscountType("flat");
       return;
     }
+
+    // ❗ CASE 2: NO criteriaDiscount → RESET properly
+    setCriteriaDiscounts(defaultCriteria);
 
     // Total / direct discount prefill
     setDiscountType(adType === undefined ? "flat" : adType);
@@ -109,7 +138,6 @@ const DiscountModal = ({
     setCalculatedPrice(adPrice ?? originalPrice);
 
   }, [discountModalOpen, activeDetail?.JobNo]);
-
 
   useEffect(() => {
     if (!activeDetail) return;
@@ -153,33 +181,299 @@ const DiscountModal = ({
   }, [discountValue, discountType, originalPrice, directPriceInput]);
 
 
+  // const handleSaveOnly = async () => {
+  //   const limitPercent = Number(profileData?.Discount ?? 0);
+  //   console.log('limitPercent: ', limitPercent);
+  //   const originalPrice = Number(activeDetail?.price || 0);
+
+  //   let appliedDiscount = 0;
+  //   let criteriaPayload = {};
+  //   const getCriteriaBaseAmount = (field) => {
+  //     switch (field) {
+  //       case "Diamond":
+  //         return Number(activeDetail?.TotalDiamondCost || 0);
+
+  //       case "Stone":
+  //         return Number(activeDetail?.TotalColorstoneCost || 0);
+
+  //       case "Metal":
+  //         return Number(activeDetail?.TotalMetalCost || 0);
+
+  //       case "Labour":
+  //         return Number(activeDetail?.TotalMakingCost || 0);
+
+  //       case "Misc":
+  //         return Number(activeDetail?.TotalMiscCost || 0);
+
+  //       default:
+  //         return 0;
+  //     }
+  //   };
+  //   if (discountMode === "criteria") {
+  //     const map = {
+  //       diamond: "Diamond",
+  //       stone: "Stone",
+  //       metal: "Metal",
+  //       labour: "Labour",
+  //       Misc: "Misc",
+  //     };
+
+  //     let exceeded = false;
+  //     criteriaPayload = {
+  //       IsCriteriabasedAmount: 1,
+  //     };
+
+  //     Object.entries(map).forEach(([key, apiKey]) => {
+  //       const visible = visibleCriteria[key];
+  //       const value = Number(criteriaDiscounts[key]?.value || 0);
+  //       const type = criteriaDiscounts[key]?.type;
+
+  //       const baseAmount = getCriteriaBaseAmount(apiKey);
+  //       let maxAllowed = 0;
+  //       if (type === "amount") {
+  //         maxAllowed = (baseAmount * limitPercent) / 100;
+  //         if (value > maxAllowed) exceeded = true;
+  //       }
+
+  //       if (type === "percentage") {
+  //         if (value > limitPercent) exceeded = true;
+  //       }
+
+  //       criteriaPayload[`Is${apiKey}Amount`] = visible ? 1 : 0;
+
+  //       criteriaPayload[`Is${apiKey}DiscInAmount`] =
+  //         visible && value > 0 && type === "amount" ? 1 : 0;
+
+  //       criteriaPayload[`${apiKey}Discount`] =
+  //         visible && value > 0 ? value : 0;
+  //     });
+
+  //     if (exceeded) {
+  //       showToast({
+  //         message: `Discount limit  ${limitPercent}% reached`,
+  //         bgColor: "linear-gradient(to right, #b2069b, #3909c2)",
+  //         fontColor: "white",
+  //         duration: 5000,
+  //         icon: "warr"
+  //       });
+  //       return;
+  //     }
+
+  //     // ---------- Calculate Final Discount (SQL Matching Logic) ----------
+  //     appliedDiscount = 0;
+
+  //     Object.entries(map).forEach(([key, apiKey]) => {
+  //       const isActive = criteriaPayload[`Is${apiKey}Amount`] === 1;
+  //       const isAmount =
+  //         criteriaPayload[`Is${apiKey}DiscInAmount`] === 1;
+  //       const discountValue = Number(
+  //         criteriaPayload[`${apiKey}Discount`] || 0
+  //       );
+
+  //       if (!isActive || discountValue <= 0) return;
+
+  //       const baseAmount = getCriteriaBaseAmount(apiKey);
+
+  //       let componentDiscount = 0;
+
+  //       if (isAmount) {
+  //         // Flat discount
+  //         componentDiscount = discountValue;
+  //       } else {
+  //         // Percentage discount
+  //         componentDiscount =
+  //           (baseAmount * discountValue) / 100;
+  //       }
+
+  //       appliedDiscount += componentDiscount;
+  //     });
+
+  //     if (appliedDiscount <= 0) {
+  //       showToast({
+  //         message: "Discount removed",
+  //         bgColor: "linear-gradient(to right, #b2069b, #3909c2)",
+  //         fontColor: "white",
+  //         duration: 5000,
+  //         icon: "remove"
+  //       });
+
+  //       updateScannedAndSession({
+  //         ...activeDetail,
+  //         discountValue: "",
+  //         discountType: "",
+  //         discountedPrice: originalPrice,
+  //         criteriaDiscount: null,
+  //       });
+
+  //       setDiscountModalOpen(false);
+  //       return;
+  //     }
+  //   }
+  //   else {
+  //     if (directPriceInput !== "") {
+  //       const directPrice = Number(directPriceInput);
+  //       appliedDiscount = originalPrice - directPrice;
+
+  //       if (
+  //         appliedDiscount >
+  //         (originalPrice * limitPercent) / 100
+  //       ) {
+  //         showToast({
+  //           message: `Discount limit  ${limitPercent}% reached`,
+  //           bgColor: "linear-gradient(to right, #b2069b, #3909c2)",
+  //           fontColor: "white",
+  //           duration: 5000,
+  //           icon: "warr"
+  //         });
+  //         return;
+  //       }
+  //     }
+
+  //     else if (discountType === "flat") {
+  //       appliedDiscount = Number(discountValue);
+  //       if (
+  //         appliedDiscount >
+  //         (originalPrice * limitPercent) / 100
+  //       ) {
+  //         showToast({
+  //           message: `Discount limit  ${limitPercent}% reached`,
+  //           bgColor: "linear-gradient(to right, #b2069b, #3909c2)",
+  //           fontColor: "white",
+  //           duration: 5000,
+  //           icon: "warr"
+  //         });
+  //         return;
+  //       }
+  //     }
+
+  //     else if (discountType === "percentage") {
+  //       const percent = Number(discountValue);
+
+  //       if (percent > limitPercent) {
+  //         showToast({
+  //           message: `Discount limit  ${limitPercent}% reached`,
+  //           bgColor: "linear-gradient(to right, #b2069b, #3909c2)",
+  //           fontColor: "white",
+  //           duration: 5000,
+  //           icon: "warr"
+  //         });
+  //         return;
+  //       }
+
+  //       appliedDiscount =
+  //         (originalPrice * percent) / 100;
+  //     }
+  //     if (appliedDiscount <= 0) {
+  //       showToast({
+  //         message: "Discount removed",
+  //         bgColor: "linear-gradient(to right, #b2069b, #3909c2)",
+  //         fontColor: "white",
+  //         duration: 5000,
+  //         icon: "remove"
+  //       });
+
+  //       updateScannedAndSession({
+  //         ...activeDetail,
+  //         discountValue: "",
+  //         discountType: "",
+  //         discountedPrice: originalPrice,
+  //         criteriaDiscount: null,
+  //       });
+
+  //       setDiscountModalOpen(false);
+  //       return;
+  //     }
+  //   }
+
+  //   try {
+  //     const activeCust = JSON.parse(
+  //       sessionStorage.getItem("curruntActiveCustomer")
+  //     );
+
+  //     const Device_Token =
+  //       sessionStorage.getItem("device_token");
+
+  //     const body = {
+  //       Mode: "SaveDiscount",
+  //       Token: Device_Token,
+  //       ReqData: JSON.stringify([
+  //         {
+  //           ForEvt: "SaveDiscount",
+  //           DeviceToken: Device_Token,
+  //           AppId: 3,
+  //           JobNo: activeDetail?.JobNo,
+  //           CustomerId: activeCust?.CustomerId,
+  //           IsVisitor: 0,
+  //           IsCriteriabasedAmount:
+  //             discountMode === "criteria" ? 1 : 0,
+  //           ...criteriaPayload,
+  //           DiscountOnId:
+  //             discountMode === "total" &&
+  //               discountType === "flat"
+  //               ? 1
+  //               : 0,
+  //           Discount:
+  //             discountMode === "criteria" ? "0" :
+  //               discountMode === "total"
+  //                 ? discountValue
+  //                 : appliedDiscount.toFixed(0),
+  //         },
+  //       ]),
+  //     };
+
+  //     await CallApi(body);
+  //   } catch (err) {
+  //     console.warn("Discount Save Error:", err);
+  //   }
+  //   updateScannedAndSession({
+  //     ...activeDetail,
+  //     discountValue:
+  //       discountMode === "criteria"
+  //         ? appliedDiscount.toFixed(0)
+  //         : Number(discountValue),
+  //     criteriaDiscount:
+  //       discountMode === "criteria"
+  //         ? criteriaPayload
+  //         : null,
+  //     discountType:
+  //       discountMode === "criteria"
+  //         ? "criteria"
+  //         : discountType,
+  //     discountedPrice:
+  //       (originalPrice - appliedDiscount).toFixed(0),
+  //   });
+
+  //   showToast({
+  //     message: "Discount applied successfully.",
+  //     bgColor: "linear-gradient(to right, #b2069b, #3909c2)",
+  //     fontColor: "white",
+  //     duration: 5000,
+  //     icon: "success"
+  //   });
+
+  //   setDiscountModalOpen(false);
+  // };
+
+
   const handleSaveOnly = async () => {
     const limitPercent = Number(profileData?.Discount ?? 0);
+    const hasLimit = limitPercent > 0; // ✅ 0 = no limit
     const originalPrice = Number(activeDetail?.price || 0);
 
     let appliedDiscount = 0;
     let criteriaPayload = {};
+
     const getCriteriaBaseAmount = (field) => {
       switch (field) {
-        case "Diamond":
-          return Number(activeDetail?.TotalDiamondCost || 0);
-
-        case "Stone":
-          return Number(activeDetail?.TotalColorstoneCost || 0);
-
-        case "Metal":
-          return Number(activeDetail?.TotalMetalCost || 0);
-
-        case "Labour":
-          return Number(activeDetail?.TotalMakingCost || 0);
-
-        case "Misc":
-          return Number(activeDetail?.TotalMiscCost || 0);
-
-        default:
-          return 0;
+        case "Diamond": return Number(activeDetail?.TotalDiamondCost || 0);
+        case "Stone": return Number(activeDetail?.TotalColorstoneCost || 0);
+        case "Metal": return Number(activeDetail?.TotalMetalCost || 0);
+        case "Labour": return Number(activeDetail?.TotalMakingCost || 0);
+        case "Misc": return Number(activeDetail?.TotalMiscCost || 0);
+        default: return 0;
       }
     };
+
     if (discountMode === "criteria") {
       const map = {
         diamond: "Diamond",
@@ -190,73 +484,69 @@ const DiscountModal = ({
       };
 
       let exceeded = false;
-      criteriaPayload = {
-        IsCriteriabasedAmount: 1,
-      };
+      criteriaPayload = { IsCriteriabasedAmount: 1 };
 
       Object.entries(map).forEach(([key, apiKey]) => {
         const visible = visibleCriteria[key];
         const value = Number(criteriaDiscounts[key]?.value || 0);
         const type = criteriaDiscounts[key]?.type;
-
         const baseAmount = getCriteriaBaseAmount(apiKey);
-        let maxAllowed = 0;
-        if (type === "amount") {
-          maxAllowed = (baseAmount * limitPercent) / 100;
-          if (value > maxAllowed) exceeded = true;
-        }
 
-        if (type === "percentage") {
-          if (value > limitPercent) exceeded = true;
+        // ✅ Only check limit if hasLimit is true
+        if (hasLimit) {
+          if (type === "amount") {
+            const maxAllowed = (baseAmount * limitPercent) / 100;
+            if (value > maxAllowed) exceeded = true;
+          }
+          if (type === "percentage") {
+            if (value > limitPercent) exceeded = true;
+          }
+        } else {
+          // ✅ No limit — but still validate: amount can't exceed base, % can't exceed 100
+          if (type === "amount" && value > baseAmount) exceeded = true;
+          if (type === "percentage" && value > 100) exceeded = true;
         }
 
         criteriaPayload[`Is${apiKey}Amount`] = visible ? 1 : 0;
-
-        criteriaPayload[`Is${apiKey}DiscInAmount`] =
-          visible && value > 0 && type === "amount" ? 1 : 0;
-
-        criteriaPayload[`${apiKey}Discount`] =
-          visible && value > 0 ? value : 0;
+        criteriaPayload[`Is${apiKey}DiscInAmount`] = visible && value > 0 && type === "amount" ? 1 : 0;
+        criteriaPayload[`${apiKey}Discount`] = visible && value > 0 ? value : 0;
       });
 
       if (exceeded) {
         showToast({
-          message: `Discount limit  ${limitPercent}% reached`,
+          message: hasLimit
+            ? `Discount limit ${limitPercent}% reached`
+            : "Discount cannot exceed original component amount or 100%",
           bgColor: "linear-gradient(to right, #b2069b, #3909c2)",
           fontColor: "white",
           duration: 5000,
+          icon: "warr",
         });
         return;
       }
 
-      // ---------- Calculate Final Discount (SQL Matching Logic) ----------
+      // Calculate final discount
       appliedDiscount = 0;
-
       Object.entries(map).forEach(([key, apiKey]) => {
         const isActive = criteriaPayload[`Is${apiKey}Amount`] === 1;
-        const isAmount =
-          criteriaPayload[`Is${apiKey}DiscInAmount`] === 1;
-        const discountValue = Number(
-          criteriaPayload[`${apiKey}Discount`] || 0
-        );
-
-        if (!isActive || discountValue <= 0) return;
-
+        const isAmount = criteriaPayload[`Is${apiKey}DiscInAmount`] === 1;
+        const discVal = Number(criteriaPayload[`${apiKey}Discount`] || 0);
+        if (!isActive || discVal <= 0) return;
         const baseAmount = getCriteriaBaseAmount(apiKey);
-
-        let componentDiscount = 0;
-
-        if (isAmount) {
-          // Flat discount
-          componentDiscount = discountValue;
-        } else {
-          // Percentage discount
-          componentDiscount =
-            (baseAmount * discountValue) / 100;
-        }
-
-        appliedDiscount += componentDiscount;
+        appliedDiscount += isAmount ? discVal : (baseAmount * discVal) / 100;
       });
+
+      // ✅ Final safety: total criteria discount can't exceed original price
+      if (appliedDiscount >= originalPrice) {
+        showToast({
+          message: "Total discount cannot exceed original price",
+          bgColor: "linear-gradient(to right, #b2069b, #3909c2)",
+          fontColor: "white",
+          duration: 5000,
+          icon: "warr",
+        });
+        return;
+      }
 
       if (appliedDiscount <= 0) {
         showToast({
@@ -264,8 +554,8 @@ const DiscountModal = ({
           bgColor: "linear-gradient(to right, #b2069b, #3909c2)",
           fontColor: "white",
           duration: 5000,
+          icon: "remove",
         });
-
         updateScannedAndSession({
           ...activeDetail,
           discountValue: "",
@@ -273,70 +563,69 @@ const DiscountModal = ({
           discountedPrice: originalPrice,
           criteriaDiscount: null,
         });
-
         setDiscountModalOpen(false);
         return;
       }
-    }
-    else {
+
+    } else {
+      // ---- TOTAL mode ----
       if (directPriceInput !== "") {
         const directPrice = Number(directPriceInput);
         appliedDiscount = originalPrice - directPrice;
 
-        if (
-          appliedDiscount >
-          (originalPrice * limitPercent) / 100
-        ) {
+        // ✅ Direct price: just can't be >= originalPrice (already enforced in input)
+        if (hasLimit && appliedDiscount > (originalPrice * limitPercent) / 100) {
           showToast({
-            message: `Discount limit  ${limitPercent}% reached`,
+            message: `Discount limit ${limitPercent}% reached`,
             bgColor: "linear-gradient(to right, #b2069b, #3909c2)",
             fontColor: "white",
             duration: 5000,
+            icon: "warr",
           });
           return;
         }
-      }
 
-      else if (discountType === "flat") {
+      } else if (discountType === "flat") {
         appliedDiscount = Number(discountValue);
-        if (
-          appliedDiscount >
-          (originalPrice * limitPercent) / 100
-        ) {
+
+        // ✅ Flat: can't exceed originalPrice - 1 (already enforced in input)
+        if (hasLimit && appliedDiscount > (originalPrice * limitPercent) / 100) {
           showToast({
-            message: `Discount limit  ${limitPercent}% reached`,
+            message: `Discount limit ${limitPercent}% reached`,
             bgColor: "linear-gradient(to right, #b2069b, #3909c2)",
             fontColor: "white",
             duration: 5000,
+            icon: "warr",
           });
           return;
         }
-      }
 
-      else if (discountType === "percentage") {
+      } else if (discountType === "percentage") {
         const percent = Number(discountValue);
 
-        if (percent > limitPercent) {
+        // ✅ Percentage: can't exceed 100 (no limit case), or limitPercent (limit case)
+        if (hasLimit && percent > limitPercent) {
           showToast({
-            message: `Discount limit  ${limitPercent}% reached`,
+            message: `Discount limit ${limitPercent}% reached`,
             bgColor: "linear-gradient(to right, #b2069b, #3909c2)",
             fontColor: "white",
             duration: 5000,
+            icon: "warr",
           });
           return;
         }
-
-        appliedDiscount =
-          (originalPrice * percent) / 100;
+        // no-limit: % > 100 already blocked in handleDiscountChange ✅
+        appliedDiscount = (originalPrice * percent) / 100;
       }
+
       if (appliedDiscount <= 0) {
         showToast({
           message: "Discount removed",
           bgColor: "linear-gradient(to right, #b2069b, #3909c2)",
           fontColor: "white",
           duration: 5000,
+          icon: "remove",
         });
-
         updateScannedAndSession({
           ...activeDetail,
           discountValue: "",
@@ -344,7 +633,6 @@ const DiscountModal = ({
           discountedPrice: originalPrice,
           criteriaDiscount: null,
         });
-
         setDiscountModalOpen(false);
         return;
       }
@@ -413,10 +701,12 @@ const DiscountModal = ({
       bgColor: "linear-gradient(to right, #b2069b, #3909c2)",
       fontColor: "white",
       duration: 5000,
+      icon: "success"
     });
 
     setDiscountModalOpen(false);
   };
+
 
   const maxDirectPrice = Math.max(originalPrice - 1, 0);
   const handleDirectPriceInput = (e) => {
@@ -519,9 +809,11 @@ const DiscountModal = ({
           <ToggleButton value="total" style={{ fontSize: '11px' }}>
             Total Amount
           </ToggleButton>
-          <ToggleButton value="criteria" style={{ fontSize: '11px' }}>
-            Criteria Based
-          </ToggleButton>
+          {hasCriteriaBreakup && (
+            <ToggleButton value="criteria" style={{ fontSize: '11px' }}>
+              Criteria Based
+            </ToggleButton>
+          )}
         </ToggleButtonGroup>
 
 

@@ -16,13 +16,37 @@ import Scanner from "./Scanner/Scanner";
 import NotePage from "../../Page/Note/NotePage";
 
 const JobScanPage = () => {
-  const [activeTab, setActiveTab] = useState("scan");
+  const [activeTab, setActiveTab] = useState(null); // null until access is resolved
   const [tabsFixed, setTabsFixed] = useState(false);
   const headerRef = useRef(null);
   const curruntActiveCustomer = JSON.parse(
     sessionStorage.getItem("curruntActiveCustomer")
   );
+  const pageAccessData = JSON.parse(
+    sessionStorage.getItem("pageAccessData") || "[]"
+  );
+
+  const hasAccess = (pageId) =>
+    pageAccessData.some(
+      (p) => p.id === pageId && Number(p.isVisiable) === 1
+    );
   const navigate = useNavigate();
+
+  // Decide the default tab on mount, in priority order: scan -> wishlist -> cart -> note
+  useEffect(() => {
+    if (hasAccess(-1034)) {
+      setActiveTab("scan");
+    } else if (hasAccess(-1037)) {
+      setActiveTab("wishlist");
+    } else if (hasAccess(-1038)) {
+      setActiveTab("cart");
+    } else if (hasAccess(-1039)) {
+      setActiveTab("note");
+    } else {
+      setActiveTab("noAccess");
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   useEffect(() => {
     const handleScroll = () => {
@@ -61,8 +85,24 @@ const JobScanPage = () => {
             <NotePage />
           </div>
         );
+      case "noAccess":
+        return (
+          <div className="tab-content">
+            <Box
+              display="flex"
+              flexDirection="column"
+              alignItems="center"
+              justifyContent="center"
+              minHeight="300px"
+            >
+              <Typography variant="h6" color="text.secondary">
+                You don't have access to any section on this page.
+              </Typography>
+            </Box>
+          </div>
+        );
       default:
-        return null;
+        return null; // still resolving access, render nothing (or a loader if you want)
     }
   };
 
@@ -105,39 +145,53 @@ const JobScanPage = () => {
         </Stack>
       </Box>
 
-      <div className={`top-tabs ${tabsFixed ? "fixed" : ""}`}>
-        <div
-          className={`tab-item ${activeTab === "scan" ? "active" : ""}`}
-          onClick={() => setActiveTab("scan")}
-        >
-          <QrCode size={20} />
-          <span>Scan Job</span>
-        </div>
-        <div
-          className={`tab-item ${activeTab === "wishlist" ? "active" : ""}`}
-          onClick={() => setActiveTab("wishlist")}
-        >
-          <Heart size={20} />
-          <span>Wishlist</span>
-        </div>
-        <div
-          className={`tab-item ${activeTab === "cart" ? "active" : ""}`}
-          onClick={() => setActiveTab("cart")}
-        >
-          <ShoppingCart size={20} />
-          <span>Cart</span>
-        </div>
+      {activeTab !== "noAccess" && (
+        <div className={`top-tabs ${tabsFixed ? "fixed" : ""}`}>
+          {hasAccess(-1034) && (
+            <div
+              className={`tab-item ${activeTab === "scan" ? "active" : ""}`}
+              onClick={() => setActiveTab("scan")}
+            >
+              <QrCode size={20} />
+              <span>Scan Job</span>
+            </div>
+          )}
 
-        <div
-          className={`tab-item ${activeTab === "note" ? "active" : ""}`}
-          onClick={() => setActiveTab("note")}
-        >
-          <FileSpreadsheet size={20} />
-          <span>Note</span>
+          {hasAccess(-1037) && (
+            <div
+              className={`tab-item ${activeTab === "wishlist" ? "active" : ""}`}
+              onClick={() => setActiveTab("wishlist")}
+            >
+              <Heart size={20} />
+              <span>Wishlist</span>
+            </div>
+          )}
+
+          {hasAccess(-1038) && (
+            <div
+              className={`tab-item ${activeTab === "cart" ? "active" : ""}`}
+              onClick={() => setActiveTab("cart")}
+            >
+              <ShoppingCart size={20} />
+              <span>Cart</span>
+            </div>
+          )}
+
+          {hasAccess(-1039) && (
+            <div
+              className={`tab-item ${activeTab === "note" ? "active" : ""}`}
+              onClick={() => setActiveTab("note")}
+            >
+              <FileSpreadsheet size={20} />
+              <span>Note</span>
+            </div>
+          )}
         </div>
+      )}
+
+      <div className={`tab-body ${tabsFixed ? "stop" : ""}`}>
+        {renderTabContent()}
       </div>
-      
-      <div className={`tab-body ${tabsFixed ? "stop" : ""}`}>{renderTabContent()}</div>
     </div>
   );
 };

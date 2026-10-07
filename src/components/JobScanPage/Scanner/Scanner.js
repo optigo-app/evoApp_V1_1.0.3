@@ -76,6 +76,8 @@ const Scanner = () => {
   const webcamRef = useRef(null);
   const trackRef = useRef(null);
   const detectorRef = useRef(null);
+  const lastScannedRef = useRef("");
+  const lastScanTimeRef = useRef(0);
 
   const [priceBreackUpAllValues, setPriceBreackUpAllValues] = useState();
   const [openPriceBraeckUp, setOpenPriceBraeckUp] = useState(false);
@@ -85,18 +87,27 @@ const Scanner = () => {
   const [isFrozen, setIsFrozen] = useState(false);
   const [cameraReady, setCameraReady] = useState(false);
   const [triggerPrint, setTriggerPrint] = useState(false);
+  const pageAccessData = JSON.parse(
+    sessionStorage.getItem("pageAccessData") || "[]"
+  );
+
+  const hasAccess = (pageId) =>
+    pageAccessData.some(
+      (p) => p.id === pageId && Number(p.isVisiable) === 1
+    );
 
   const handleUserMedia = useCallback((stream) => {
     setCameraReady(true);
     try {
       const track = stream.getVideoTracks()[0];
-      const capabilities = track.getCapabilities();
-      if (capabilities.zoom) {
-        setZoomCap(true);
+      trackRef.current = track; // ← YOU WERE MISSING THIS
+      const capabilities = track.getCapabilities?.();
+      if (capabilities?.zoom) {
+        setZoomCap(capabilities.zoom); // store the full cap object, not just true
       }
     } catch (error) {
       console.warn("Zoom not available");
-      setZoomCap(false);
+      setZoomCap(null);
     }
   }, []);
 
@@ -135,6 +146,7 @@ const Scanner = () => {
           bgColor: "linear-gradient(to right, #b2069b, #3909c2)",
           fontColor: "white",
           duration: 2500,
+          icon: "info"
         });
         setIsLoading(false);
         return false;
@@ -165,6 +177,7 @@ const Scanner = () => {
             bgColor: "linear-gradient(to right, #b2069b, #3909c2)",
             fontColor: "white",
             duration: 2500,
+            icon: "warr"
           });
           return false;
         }
@@ -248,6 +261,7 @@ const Scanner = () => {
           bgColor: "linear-gradient(to right, #b2069b, #3909c2)",
           fontColor: "white",
           duration: 2500,
+          icon: "success"
         });
       } catch (err) {
         setIsLoading(false);
@@ -256,6 +270,7 @@ const Scanner = () => {
           bgColor: "linear-gradient(to right, #b2069b, #3909c2)",
           fontColor: "white",
           duration: 2500,
+          icon: "warr"
         });
         return false;
       } finally {
@@ -266,23 +281,29 @@ const Scanner = () => {
   );
 
   useEffect(() => {
-    if (cameraReady && mode === "qr" && webcamRef.current) {
-      const videoElem = webcamRef.current.video;
-      if (!videoElem) return;
-      const reader = new BrowserMultiFormatReader();
-      detectorRef.current = reader;
-      reader.decodeFromVideoDevice(
-        null,
-        videoElem,
-        (result, error) => {
-          if (result) {
-            addScan(result.text.trim());
-          } else {
-            // console.warn(error); 
-          }
+    if (!cameraReady || mode !== "qr" || !webcamRef.current) return;
+
+    const videoElem = webcamRef.current.video;
+    if (!videoElem) return;
+
+    const reader = new BrowserMultiFormatReader();
+    detectorRef.current = reader;
+
+    reader.decodeFromVideoDevice(null, videoElem, (result, err) => {
+      if (result) {
+        const text = result.getText().trim();
+        const now = Date.now();
+        if (
+          text &&
+          (text !== lastScannedRef.current ||
+            now - lastScanTimeRef.current > 3000)
+        ) {
+          lastScannedRef.current = text;
+          lastScanTimeRef.current = now;
+          addScan(text);
         }
-      );
-    }
+      }
+    });
 
     return () => {
       if (detectorRef.current) {
@@ -321,6 +342,7 @@ const Scanner = () => {
           bgColor: "linear-gradient(to right, #b2069b, #3909c2)",
           fontColor: "white",
           duration: 2000,
+          icon: "remove"
         });
 
         const updated = {
@@ -362,6 +384,7 @@ const Scanner = () => {
           bgColor: "linear-gradient(to right, #b2069b, #3909c2)",
           fontColor: "white",
           duration: 2000,
+          icon: "success"
         });
 
         const updated = {
@@ -378,6 +401,7 @@ const Scanner = () => {
         bgColor: "linear-gradient(to right, #b2069b, #3909c2)",
         fontColor: "white",
         duration: 4000,
+        icon: "warr"
       });
     }
   };
@@ -410,6 +434,7 @@ const Scanner = () => {
           bgColor: "linear-gradient(to right, #b2069b, #3909c2)",
           fontColor: "white",
           duration: 4000,
+          icon: "remove"
         });
 
         const updated = {
@@ -510,6 +535,7 @@ const Scanner = () => {
           bgColor: "linear-gradient(to right, #b2069b, #3909c2)",
           fontColor: "white",
           duration: 4000,
+          icon: "success"
         });
 
         const updated = {
@@ -528,6 +554,7 @@ const Scanner = () => {
         bgColor: "linear-gradient(to right, #b2069b, #3909c2)",
         fontColor: "white",
         duration: 4000,
+        icon: "warr"
       });
     }
   };
@@ -950,22 +977,25 @@ const Scanner = () => {
             >
               <GoInfo style={{ fontSize: "25px" }} />
             </Button>}
-            <Button
-              className="scanner_List_moreview"
-              onClick={() => toggleWishlist("", false)}
-              style={{
-                backgroundColor:
-                  activeDetail?.IsRateZero == 1
-                    ? "transparent"
-                    : "rgba(227, 228, 245, 0.4901960784)",
-              }}
-            >
-              <Heart
-                fill={activeDetail.isInWishList ? "#ff3366" : "none"}
-                color={activeDetail.isInWishList ? "#ff3366" : "black"}
-                style={{ height: "20px", width: "20px" }}
-              />
-            </Button>
+
+            {hasAccess(-1037) && (
+              <Button
+                className="scanner_List_moreview"
+                onClick={() => toggleWishlist("", false)}
+                style={{
+                  backgroundColor:
+                    activeDetail?.IsRateZero == 1
+                      ? "transparent"
+                      : "rgba(227, 228, 245, 0.4901960784)",
+                }}
+              >
+                <Heart
+                  fill={activeDetail.isInWishList ? "#ff3366" : "none"}
+                  color={activeDetail.isInWishList ? "#ff3366" : "black"}
+                  style={{ height: "20px", width: "20px" }}
+                />
+              </Button>
+            )}
             {/* <IconButton onClick={() => toggleWishlist("", false)}>
               <ShoppingCart
                 className={`btn ${
@@ -973,22 +1003,24 @@ const Scanner = () => {
                 }`}
               />
             </IconButton> */}
-            <Button
-              className="scanner_List_moreview"
-              onClick={() => toggleCart("", false)}
-              style={{
-                backgroundColor:
-                  activeDetail?.IsRateZero == 1
-                    ? "transparent"
-                    : "rgba(227, 228, 245, 0.4901960784)",
-              }}
-            >
-              <ShoppingCart
-                fill={activeDetail.isInCartList ? "#4caf50" : "none"}
-                color={activeDetail.isInCartList ? "#4caf50" : "black"}
-                style={{ height: "20px", width: "20px" }}
-              />
-            </Button>
+            {hasAccess(-1038) && (
+              <Button
+                className="scanner_List_moreview"
+                onClick={() => toggleCart("", false)}
+                style={{
+                  backgroundColor:
+                    activeDetail?.IsRateZero == 1
+                      ? "transparent"
+                      : "rgba(227, 228, 245, 0.4901960784)",
+                }}
+              >
+                <ShoppingCart
+                  fill={activeDetail.isInCartList ? "#4caf50" : "none"}
+                  color={activeDetail.isInCartList ? "#4caf50" : "black"}
+                  style={{ height: "20px", width: "20px" }}
+                />
+              </Button>
+            )}
 
             {/* <Button
               className="scanner_List_moreview"
@@ -1009,6 +1041,7 @@ const Scanner = () => {
                     bgColor: "linear-gradient(to right, #b2069b, #3909c2)",
                     fontColor: "white",
                     duration: 4000,
+                    icon: "info"
                   });
                 } else if (activeDetail.isInWishList) {
                   showToast({
@@ -1016,6 +1049,7 @@ const Scanner = () => {
                     bgColor: "linear-gradient(to right, #b2069b, #3909c2)",
                     fontColor: "white",
                     duration: 4000,
+                    icon: "info"
                   });
                 } else {
                   setDiscountModalOpen(true);
@@ -1060,8 +1094,6 @@ const Scanner = () => {
             >
               <Printer style={{ height: "20px", width: "20px" }} />
             </Button> */}
-
-
           </div>
         </div>
       </div>
@@ -1101,14 +1133,10 @@ const Scanner = () => {
   };
 
   const [expandedItems, setExpandedItems] = useState([]);
-
   const handleZoomChange = (zoomValue) => {
     if (!cameraReady) return;
     if (zoomCap && trackRef.current) {
-      const clampedZoom = Math.min(
-        zoomCap.max,
-        Math.max(zoomCap.min, zoomValue)
-      );
+      const clampedZoom = Math.min(zoomCap.max, Math.max(zoomCap.min, zoomValue));
       trackRef.current
         .applyConstraints({ advanced: [{ zoom: clampedZoom }] })
         .then(() => setZoomLevel(clampedZoom))
@@ -1232,7 +1260,21 @@ const Scanner = () => {
 
     const hasRowDiscount = totalDisc > 0;
 
-    return { rows, totalOrig, totalDisc, hasRowDiscount };
+    // Metal / Diamond / Color Stone / Misc are the "core" breakup rows.
+    // If all four of these are 0, the row-level breakup carries no useful
+    // information, so callers should skip rendering it entirely and only
+    // show the Tot Amt / Final Price summary.
+    const coreLabels = ["Metal", "Diamond", "Color Stone", "Misc"];
+    const coreRows = rows.filter((r) => coreLabels.includes(r.label));
+    const showBreakupRows = coreRows.some((r) => Number(r.original) > 0);
+
+    return { rows, totalOrig, totalDisc, hasRowDiscount, showBreakupRows };
+  };
+
+  const isJobMovedToBill = (jobNo) => {
+    if (!jobNo) return false;
+    const movedBillJobs = JSON.parse(localStorage.getItem("movedBillJob") || "[]");
+    return movedBillJobs.includes(jobNo);
   };
 
   return (
@@ -1245,187 +1287,6 @@ const Scanner = () => {
         updateScannedAndSession={updateScannedAndSession}
         showToast={showToast}
       />
-
-      {/* <Modal
-        open={openPriceBraeckUp}
-        onClose={() => setOpenPriceBraeckUp(false)}
-        aria-labelledby="modal-modal-title"
-        aria-describedby="modal-modal-description"
-      >
-        <Box sx={style}>
-          <div className="drawer-content">
-            <div style={{ display: "flex", gap: "3px", fontSize: "13px" }}>
-              <p style={{ margin: "0px", fontWeight: 600, fontSize: "13px" }}>
-                {priceBreackUpAllValues?.designNo}
-              </p>
-
-              <p style={{ margin: "0px", fontWeight: 600, fontSize: "13px" }}>
-                ({priceBreackUpAllValues?.JobNo})
-              </p>
-            </div>
-            <p
-              style={{
-                margin: "5px",
-                textAlign: "center",
-                fontSize: "18px",
-                fontWeight: 500,
-                textDecoration: "underline",
-              }}
-            >
-              Price Breakup
-            </p>
-            <div>
-                <div className="price_breack_div">
-                  <p className="price_breack_div_titles">Metal</p>
-                  <p className="price_breack_div_values">
-                    ₹ {priceBreackUpAllValues?.metal}
-                  </p>
-                </div>
-
-                <div className="price_breack_div">
-                  <p className="price_breack_div_titles">Metal With Loss</p>
-                  <p className="price_breack_div_values">
-                    ₹ {priceBreackUpAllValues?.MetalWithlossCost}
-                  </p>
-                </div>
-
-                <div className="price_breack_div">
-                  <p className="price_breack_div_titles">Diamond</p>
-                  <p className="price_breack_div_values">
-                    ₹ {priceBreackUpAllValues?.TotalDiamondCost}
-                  </p>
-                </div>
-
-                <div className="price_breack_div">
-                  <p className="price_breack_div_titles">Color Stone</p>
-                  <p className="price_breack_div_values">
-                    ₹ {priceBreackUpAllValues?.TotalColorstoneCost}
-                  </p>
-                </div>
-
-                <div className="price_breack_div">
-                  <p className="price_breack_div_titles">Misc</p>
-                  <p className="price_breack_div_values">
-                    ₹ {priceBreackUpAllValues?.TotalMiscCost}
-                  </p>
-                </div>
-
-                <div className="price_breack_div">
-                  <p className="price_breack_div_titles">Making Charges</p>
-                  <p className="price_breack_div_values">
-                    ₹ {priceBreackUpAllValues?.priceBreakupMakingCharge}
-                  </p>
-                </div>
-
-              <div className="price_breack_div">
-                <p className="price_breack_div_titles">Total Amount</p>
-                <p className="price_breack_div_values">
-                  ₹{" "}
-                  {
-                    (
-                      priceBreackUpAllValues?.IsRateZero == 0
-                        ? Number(priceBreackUpAllValues?.price || 0)
-                        : Number(priceBreackUpAllValues?.MetalWithlossCost || 0) +
-                        Number(priceBreackUpAllValues?.TotalDiamondCost || 0) +
-                        Number(priceBreackUpAllValues?.TotalColorstoneCost || 0) +
-                        Number(priceBreackUpAllValues?.TotalMiscCost || 0) +
-                        Number(priceBreackUpAllValues?.priceBreakupMakingCharge || 0)
-                    ).toFixed(0)
-                  }
-                </p>
-              </div>
-              <div>
-                <div>
-                  {discountFields.map((item, index) => {
-                    const data = priceBreackUpAllValues?.criteriaDiscount;
-                    if (!data || data[item.amountKey] !== 1) return null;
-
-                    const discountValue = Number(data[item.valueKey]) || 0;
-                    const baseAmount = Number(priceBreackUpAllValues?.[item.baseKey]) || 0;
-
-                    const finalDiscount =
-                      data[item.discTypeKey] === 1
-                        ? discountValue
-                        : (baseAmount * discountValue) / 100;
-
-                    if (finalDiscount <= 0) return null;
-
-                    return (
-                      <div className="price_breack_div" key={index}>
-                        <p className="price_breack_div_titles">{item.title}</p>
-                        <p className="price_breack_div_values">
-                           ₹ {finalDiscount}
-                        </p>
-                      </div>
-                    );
-                  })}
-                </div>
-              </div>
-              {priceBreackUpAllValues?.discountValue && (
-                <div className="price_breack_div" style={{ borderTop: "1px solid #686363" }}>
-                  <p
-                    className="price_breack_div_titles"
-                    style={{ color: "green" }}
-                  >
-                    Save (Tot. Discount)
-                  </p>
-                  <p
-                    className="price_breack_div_values"
-                    style={{ color: "green" }}
-                  >
-                    {priceBreackUpAllValues?.criteriaDiscount?.IsCriteriabasedAmount == 1
-                      ?
-                      `₹ ${priceBreackUpAllValues?.discountValue}`
-                      : priceBreackUpAllValues?.discountType === "flat" ||
-                        priceBreackUpAllValues?.discountType === "direct"
-                        ? `₹${priceBreackUpAllValues?.discountValue}`
-                        : `${priceBreackUpAllValues?.discountValue}%`}
-                  </p>
-                </div>
-              )}
-              <div
-                className="price_breack_div"
-                style={{ borderTop: "1px solid #686363" }}
-              >
-                <p className="price_breack_div_titles_total">
-                  Final Price{" "}
-                  <span style={{ fontSize: "12px", color: "#888787" }}>
-                    (Exclude Tax)
-                  </span>
-                </p>
-                <p className="price_breack_div_values_total">
-                  ₹{" "}
-                  {
-                    priceBreackUpAllValues?.discountedPrice
-                      ? Number(priceBreackUpAllValues.discountedPrice)
-                      : priceBreackUpAllValues?.IsRateZero == 0
-                        ? Number(priceBreackUpAllValues?.price || 0)
-                        : Number(priceBreackUpAllValues?.MetalWithlossCost || 0) +
-                        Number(priceBreackUpAllValues?.TotalDiamondCost || 0) +
-                        Number(priceBreackUpAllValues?.TotalColorstoneCost || 0) +
-                        Number(priceBreackUpAllValues?.TotalMiscCost || 0) +
-                        Number(priceBreackUpAllValues?.priceBreakupMakingCharge || 0)
-                  }
-
-                </p>
-              </div>
-            </div>
-            <button
-              onClick={() => setOpenPriceBraeckUp(false)}
-              style={{
-                border: "none",
-                position: "absolute",
-                top: "10px",
-                right: "10px",
-                background: "none",
-              }}
-            >
-              <CircleX />
-            </button>
-          </div>
-        </Box>
-      </Modal> */}
-
       <Modal
         open={openPriceBraeckUp}
         onClose={() => setOpenPriceBraeckUp(false)}
@@ -1470,7 +1331,7 @@ const Scanner = () => {
             </p>
 
             {(() => {
-              const { rows, totalOrig, totalDisc, hasRowDiscount } =
+              const { rows, totalOrig, totalDisc, hasRowDiscount, showBreakupRows } =
                 buildRows(priceBreackUpAllValues);
 
               const discountedPrice =
@@ -1500,47 +1361,50 @@ const Scanner = () => {
                     fontSize: "13px",
                   }}
                 >
-                  <thead>
-                    <tr style={{ borderBottom: "2px solid #e0e0e0" }}>
-                      <th style={thStyle("left")}>Item</th>
-                      {hasRowDiscount && <th style={thStyle("right")}>Price</th>}
-                      {hasRowDiscount && <th style={thStyle("right")}>Disc</th>}
-                      <th style={thStyle("right")}>
-                        Final
-                      </th>
-                    </tr>
-                  </thead>
+                  {showBreakupRows && (
+                    <thead>
+                      <tr style={{ borderBottom: "2px solid #e0e0e0" }}>
+                        <th style={thStyle("left")}>Item</th>
+                        {hasRowDiscount && <th style={thStyle("right")}>Price</th>}
+                        {hasRowDiscount && <th style={thStyle("right")}>Disc</th>}
+                        <th style={thStyle("right")}>
+                          Final
+                        </th>
+                      </tr>
+                    </thead>
+                  )}
 
                   <tbody>
-                    {rows.map((row, i) => {
-                      const discounted = row.original - row.discAmt;
-                      return (
-                        <tr key={i} style={{ borderBottom: "1px solid #f0f0f0" }}>
-                          <td style={tdStyle("left")}>{row.label}</td>
+                    {showBreakupRows &&
+                      rows.map((row, i) => {
+                        const discounted = row.original - row.discAmt;
+                        return (
+                          <tr key={i} style={{ borderBottom: "1px solid #f0f0f0" }}>
+                            <td style={tdStyle("left")}>{row.label}</td>
 
-                          {hasRowDiscount && (
-                            <td style={tdStyle("right")}>
-                              {row.original ? fmt(row.original) : "—"}
+                            {hasRowDiscount && (
+                              <td style={tdStyle("right")}>
+                                {fmt(row.original)}
+                              </td>
+                            )}
+
+                            {hasRowDiscount && (
+                              <td
+                                style={{
+                                  ...tdStyle("center"),
+                                  color: row.discAmt > 0 ? "#e53935" : "#999",
+                                }}
+                              >
+                                {row.discAmt > 0 ? row.discPct : "—"}
+                              </td>
+                            )}
+
+                            <td style={{ ...tdStyle("right"), fontWeight: 600 }}>
+                              {fmt(discounted)}
                             </td>
-                          )}
-
-                          {hasRowDiscount && (
-                            <td
-                              style={{
-                                ...tdStyle("center"),
-                                color: row.discAmt > 0 ? "#e53935" : "#999",
-                              }}
-                            >
-                              {row.discAmt > 0 ? row.discPct : "—"}
-                            </td>
-                          )}
-
-                          <td style={{ ...tdStyle("right"), fontWeight: 600 }}>
-                            {fmt(discounted)}
-                          </td>
-                        </tr>
-                      );
-                    })}
+                          </tr>
+                        );
+                      })}
 
                     {/* Total Row */}
                     <tr
@@ -1553,13 +1417,13 @@ const Scanner = () => {
                         Tot Amt.
                       </td>
 
-                      {hasRowDiscount && (
+                      {showBreakupRows && hasRowDiscount && (
                         <td style={{ ...tdStyle("right"), fontWeight: 700, width: '100px' }}>
                           {fmt(totalOrig)}
                         </td>
                       )}
 
-                      {hasRowDiscount && (
+                      {showBreakupRows && hasRowDiscount && (
                         <td
                           style={{
                             ...tdStyle("right"),
@@ -1580,7 +1444,7 @@ const Scanner = () => {
                     {(priceBreackUpAllValues?.discountValue || totalDisc > 0) && (
                       <tr style={{ background: "#f1fdf4" }}>
                         <td
-                          colSpan={hasRowDiscount ? 3 : 1}
+                          colSpan={showBreakupRows && hasRowDiscount ? 3 : 1}
                           style={{
                             ...tdStyle("left"),
                             color: "#2e7d32",
@@ -1614,7 +1478,7 @@ const Scanner = () => {
                       }}
                     >
                       <td
-                        colSpan={hasRowDiscount ? 3 : 1}
+                        colSpan={showBreakupRows && hasRowDiscount ? 3 : 1}
                         style={{
                           ...tdStyle("left"),
                           fontWeight: 800,
@@ -1651,6 +1515,7 @@ const Scanner = () => {
           </div>
         </Box>
       </Modal>
+
       <div
         style={{
           display: mode === "qr" ? "block" : "none",
@@ -1690,19 +1555,14 @@ const Scanner = () => {
                 playsInline
                 muted
                 screenshotFormat="image/jpeg"
-                onUserMedia={() => setCameraReady(true)}
+                onUserMedia={handleUserMedia}
                 onUserMediaError={(err) => {
                   console.error("Camera error", err);
                   setCameraReady(false);
-                  // alert("Camera permission denied or error initializing camera.");
                 }}
-                // Optimized constraints for POS devices
                 videoConstraints={{
                   facingMode: "environment",
-                  width: { ideal: 320 },
-                  height: { ideal: 240 }
                 }}
-                // Remove objectFit: 'cover' to prevent lag
                 style={{ width: "100%", height: "100%", objectFit: "contain" }}
               />
               <div className="scan-box" />
@@ -1741,7 +1601,8 @@ const Scanner = () => {
         </div>
       </div>
 
-      {activeDetail && mode != "AllScanItem" && renderExpandedTop()}
+      {/* {activeDetail && mode != "AllScanItem" && renderExpandedTop()} */}
+      {activeDetail && mode != "AllScanItem" && !isJobMovedToBill(activeDetail?.JobNo) && renderExpandedTop()}
 
       <div style={{ display: mode === "AllScanItem" ? "block" : "none" }}>
         {scannedData.length !== 0 ? (
@@ -2095,40 +1956,42 @@ const Scanner = () => {
                               <GoInfo style={{ fontSize: "22px" }} />
                             </Button>}
 
-                            <Button
-                              className="scanner_List_moreview"
-                              onClick={() => toggleWishlist(data, true)}
-                              style={{
-                                backgroundColor:
-                                  data?.IsRateZero == 1
-                                    ? "transparent"
-                                    : "rgba(227, 228, 245, 0.4901960784)",
-                              }}
-                            >
-                              <Heart
-                                fill={data.isInWishList ? "#ff3366" : "none"}
-                                color={data.isInWishList ? "#ff3366" : "black"}
-                                style={{ height: "20px", width: "20px" }}
-                              />
-                            </Button>
-
-                            <Button
-                              className="scanner_List_moreview"
-                              onClick={() => toggleCart(data, true)}
-                              style={{
-                                backgroundColor:
-                                  data?.IsRateZero == 1
-                                    ? "transparent"
-                                    : "rgba(227, 228, 245, 0.4901960784)",
-                              }}
-                            >
-                              <ShoppingCart
-                                fill={data.isInCartList ? "#4caf50" : "none"}
-                                color={data.isInCartList ? "#4caf50" : "black"}
-                                style={{ height: "20px", width: "20px" }}
-                              />
-                            </Button>
-
+                            {hasAccess(-1037) && (
+                              <Button
+                                className="scanner_List_moreview"
+                                onClick={() => toggleWishlist(data, true)}
+                                style={{
+                                  backgroundColor:
+                                    data?.IsRateZero == 1
+                                      ? "transparent"
+                                      : "rgba(227, 228, 245, 0.4901960784)",
+                                }}
+                              >
+                                <Heart
+                                  fill={data.isInWishList ? "#ff3366" : "none"}
+                                  color={data.isInWishList ? "#ff3366" : "black"}
+                                  style={{ height: "20px", width: "20px" }}
+                                />
+                              </Button>
+                            )}
+                            {hasAccess(-1038) && (
+                              <Button
+                                className="scanner_List_moreview"
+                                onClick={() => toggleCart(data, true)}
+                                style={{
+                                  backgroundColor:
+                                    data?.IsRateZero == 1
+                                      ? "transparent"
+                                      : "rgba(227, 228, 245, 0.4901960784)",
+                                }}
+                              >
+                                <ShoppingCart
+                                  fill={data.isInCartList ? "#4caf50" : "none"}
+                                  color={data.isInCartList ? "#4caf50" : "black"}
+                                  style={{ height: "20px", width: "20px" }}
+                                />
+                              </Button>
+                            )}
                             {/* <Button
                               className="scanner_List_moreview"
                               onClick={() => {
@@ -2149,6 +2012,7 @@ const Scanner = () => {
                                     bgColor: "linear-gradient(to right, #b2069b, #3909c2)",
                                     fontColor: "white",
                                     duration: 4000,
+                                    icon: "info"
                                   });
                                 } else if (data.isInWishList) {
                                   showToast({
@@ -2156,6 +2020,7 @@ const Scanner = () => {
                                     bgColor: "linear-gradient(to right, #b2069b, #3909c2)",
                                     fontColor: "white",
                                     duration: 4000,
+                                    icon: "info"
                                   });
                                 } else {
                                   setDiscountModalOpen(true);
@@ -2257,22 +2122,6 @@ const Scanner = () => {
           </Button>
         </Stack>
       </Box>
-
-      {/* <Button
-        className="scanner_List_moreview"
-        onClick={() => handlePrintfind("", false)}
-        >
-        <Printer style={{ height: "15px", width: "15px" }} />
-        </Button> */}
-      {/* <div> */}
-      {/* <div style={{ display: "none" }}>
-        <div ref={printRef}>
-          <PritnModel activeDetail={printInfo} />
-        </div>
-        
-      </div> */}
-
-      {/* ✅ Offscreen but still rendered in DOM */}
       <div
         style={{
           position: "fixed",
@@ -2287,7 +2136,6 @@ const Scanner = () => {
           <PritnModel activeDetail={printInfo} />
         </div>
       </div>
-
       <ConfirmationDialog
         open={opencnfDialogOpen}
         onClose={handleCloseDialog}

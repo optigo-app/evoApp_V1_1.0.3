@@ -1,18 +1,3 @@
-// import React from 'react'
-// import Scanner from '../src/components/JobScanPage/Scanner/Scanner';
-// import PritnModel from './components/JobScanPage/Scanner/PritnModel/PritnModel';
-
-// const App = () => {
-//   return (
-//     <div>
-//       <Scanner />
-//       {/* <PritnModel /> */}
-//     </div>
-//   )
-// }
-
-// export default App
-
 import React, { Suspense, lazy, useEffect } from "react";
 import { BrowserRouter, Route, Routes } from "react-router-dom";
 import LoadingBackdrop from "./Utils/LoadingBackdrop";
@@ -32,12 +17,9 @@ const AddCustomer = lazy(() => import("./components/AddCustomer/AddCustomer"));
 const JobScanPage = lazy(() => import("./components/JobScanPage/JobScanPage"));
 
 function App() {
-  //  http://localhost:3000/?&device_token=BJL9401C9BL10JE8&SpVer=V1&AppVer=1.0.0   Local
-  //  http://localhost:3000/?&device_token=R77HF9W40K7QE918   online demo
-  //  https://8b003b09fd6c.ngrok-free.app/?&device_token=G3B8J4007CJ8LJJZ  test73
-  //  https://8b003b09fd6c.ngrok-free.app/?&device_token=CDB7QR8RZIVDC3WA  test74
-  // https://3bbc-103-206-139-196.ngrok-free.app/?&device_token=CDB7QR8RZIVDC3WA&SpVer=V1
-  // https://evo.optigoapps.com/V1/?&device_token=CDB7QR8RZIVDC3WA&SpVer=V1&AppVer=1.0.0
+  // http://localhost:3000/?&device_token=TDHYM68F1B30DKRL&yearCode=e3tuemVufX17ezIwfX17e29yYWlsMjV9fXt7b3JhaWwyNX19&SpVer=V1&AppVer=1.0.0   Local
+  // https://evo.optigoapps.com/V1/?&device_token=91LD3H47W6111YMK&SpVer=V1&AppVer=1.0.0   //test76
+  // http://nzen/evo/?&device_token=94VV7I2Z3TU888I4&SpVer=V1&AppVer=1.0.0
 
   useEffect(() => {
     const queryParams = new URLSearchParams(window.location.search);
@@ -45,12 +27,14 @@ function App() {
     const token = queryParams.get("token");
     const SV = queryParams.get("SV");
     const SpVer = queryParams.get("SpVer");
+    const yearCode = queryParams.get("yearCode");
     const AppVer = queryParams.get("AppVer");
 
     if (device_token !== undefined && device_token !== null) {
       sessionStorage.setItem("device_token", device_token);
       sessionStorage.setItem("token", token);
       sessionStorage.setItem("SV", SV);
+      sessionStorage.setItem("yearCode", yearCode);
       sessionStorage.setItem("SpVer", SpVer);
       sessionStorage.setItem("AppVer", AppVer);
       sessionStorage.setItem("isLogin", true);
@@ -87,6 +71,13 @@ function App() {
 }
 export default App;
 
+
 // //basename="/evo"
 // //"homepage": "/evo",
 // // R77HF9W40K7QE918  Demo copy token
+
+
+// 1/8804
+// 1/8849
+// 1/806
+// 1/801

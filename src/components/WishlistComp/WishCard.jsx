@@ -38,12 +38,25 @@ const WishlistCard = ({
 
           {/* {wishlistItems?.Discount !== 0 && */}
           <Box className="price-section">
+            {parseFloat(wishlistItems?.DiscountAmount) > 0 && (
+              <Box className="extra-price-details">
+                <Typography className="discount-amount" style={{ display: 'flex' }}>
+                  Offered Price: <p style={{ margin: "0px", fontSize: "12px", width: '9px' }}>
+                    ₹{" "}
+                  </p>{parseFloat(wishlistItems?.TaxbleAmount).toFixed(0).toLocaleString()}
+                </Typography>
+              </Box>
+            )}
             <Typography className={wishlistItems?.Discount === 0 ? "old-price-withoutdiscount" : "old-price"} style={{ display: 'flex' }}>
               <p style={{ margin: "0px", fontSize: "12px", width: '9px' }}>
                 ₹
               </p>
               {parseFloat(wishlistItems?.Amount).toFixed(0).toLocaleString()}
             </Typography>
+
+          </Box>
+          
+          <Box className="price-section">
             {wishlistItems?.Discount !== 0 && (
               wishlistItems?.DiscountOnId == 0 ? (
                 <Typography className="newprice_save">
@@ -59,17 +72,10 @@ const WishlistCard = ({
                 </Typography>
               )
             )}
+
           </Box>
           {/* } */}
-          <Box className="extra-price-details">
-            {parseFloat(wishlistItems?.DiscountAmount) > 0 && (
-              <Typography className="discount-amount" style={{ display: 'flex' }}>
-                Offered Price: <p style={{ margin: "0px", fontSize: "12px", width: '9px' }}>
-                  ₹{" "}
-                </p>{parseFloat(wishlistItems?.TaxbleAmount).toFixed(0).toLocaleString()}
-              </Typography>
-            )}
-          </Box>
+
           <Box className="price-section">
             <Typography className="new-price" style={{ display: 'flex' }}>
               <p style={{ margin: "0px", width: '9px', color: "#5e08b6", fontSize: '13px' }}>

@@ -31,8 +31,8 @@ const CartCard = ({ cartItem, handleOpenDialog }) => {
           </Typography>
 
           <Box className="price-section">
-            <Box className="extra-price-details">
-              {parseFloat(cartItem?.DiscountAmount) > 0 && (
+            {parseFloat(cartItem?.DiscountAmount) > 0 && (
+              <Box className="extra-price-details">
                 <Typography className="discount-amount" style={{ display: 'flex' }}>
                   Offered Price: {" "}
                   <p style={{ margin: "0px 2px", fontSize: "12px", width: '9px' }}>
@@ -40,8 +40,8 @@ const CartCard = ({ cartItem, handleOpenDialog }) => {
                   </p>
                   {parseFloat(cartItem?.TaxbleAmount).toFixed(0).toLocaleString()}
                 </Typography>
-              )}
-            </Box>
+              </Box>
+            )}
             <Typography className={cartItem?.Discount === 0 ? "old-price-withoutdiscount" : "old-price"} style={{ display: 'flex' }}>
               <p style={{ margin: "0px", fontSize: "12px", width: '9px' }}>
                 ₹

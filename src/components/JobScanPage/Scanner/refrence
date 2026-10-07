@@ -1,0 +1,1855 @@
+import React, { useRef, useState } from "react";
+import './MRPBill.scss'
+import DeleteIcon from "@mui/icons-material/Delete";
+import axios from "axios";
+import { useEffect } from "react";
+import { toast } from "react-toastify";
+import scanImg from "../../Assets/scanimg.gif";
+import qrImg from "../../Assets/Qrcode.png";
+import f2Img from "../../Assets/f2.gif";
+import { handleImageError, validateTwoDecimalPlaces } from "./MRPGlobalFunctions";
+import { useLocation } from "react-router-dom";
+import { Box, CircularProgress, TextField } from "@mui/material";
+import { Button, Dialog, DialogActions, DialogContent, DialogTitle, Typography } from '@mui/material';
+import moment from "moment/moment";
+import JobTable from "./JobTable";
+import RateModal from "./RateModal";
+import RoundOffBox from "./RoundOffBox";
+import { CommonAPI } from "../../../Utils/API/CommonAPI/CommonAPI";
+import GridViewIcon from '@mui/icons-material/GridView';
+import PrintIcon from '@mui/icons-material/Print';
+import HomeIcon from '@mui/icons-material/Home';
+import PeopleAltIcon from '@mui/icons-material/PeopleAlt';
+import LocalOfferIcon from '@mui/icons-material/LocalOffer';
+import QrCodeScannerIcon from '@mui/icons-material/QrCodeScanner';
+import TuneIcon from '@mui/icons-material/Tune';
+import DeleteOutlineIcon from '@mui/icons-material/DeleteOutline';
+import JewelleryTaxInvoiceSale from "./Print/JewelleryTaxInvoiceSale";
+import jsQR from "jsqr";
+import html2pdf from "html2pdf.js";
+import ShareIcon from '@mui/icons-material/Share';
+import DownloadIcon from '@mui/icons-material/Download';
+import { CalendarDays, X as CloseX } from "lucide-react";
+import { showToast } from "../../Vuexy/Tostify/ToastManager";
+import Header from "../Home/HomeMain/Header/Header";
+
+const ConfirmDialog = ({ open, onClose, onConfirm }) => (
+  <Dialog open={open} onClose={onClose}>
+    <DialogTitle style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', width: '100%' }}>Generate Bill</DialogTitle>
+    <DialogContent>
+      <Typography variant="body1">Are you sure you want to proceed ?</Typography>
+    </DialogContent>
+    <DialogActions style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', width: '100%' }}>
+      <Button onClick={onConfirm} variant="contained" color="success">
+        Confirm
+      </Button>
+      <Button onClick={onClose} variant="contained" color="error">
+        Cancel
+      </Button>
+    </DialogActions>
+  </Dialog>
+);
+
+const DP_MONTHS = ['January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December'];
+const DP_WEEKDAYS = ['Su', 'Mo', 'Tu', 'We', 'Th', 'Fr', 'Sa'];
+const getTodayStr = () => { const t = new Date(); return `${t.getFullYear()}-${String(t.getMonth() + 1).padStart(2, '0')}-${String(t.getDate()).padStart(2, '0')}`; };
+
+const MRPBill = () => {
+  const [searchVal, setSearchVal] = useState("");
+  const [selectVal, setSelectVal] = useState("");
+  const [selectLocker, setSelectLocker] = useState("");
+  const [selectBook, setSelectBook] = useState("");
+  const [jobnoVal, setJobnoVal] = useState("");
+  const [isJobPresent, setIsJobPresent] = useState(false);
+  const [customerEnteredDate, setCustomerEnterDate] = useState(getTodayStr);
+  const [customerEnteredDateError, setCustomerEnteredDateError] = useState('');
+  const [customerEnteredRemark, setCustomerEnteredRemark] = useState('');
+  const [customerEnteredRemarkError, setCustomerEnteredRemarkError] = useState('');
+  const [dateRemarkFlag, setDateRemarkFlag] = useState(false);
+  const [currencyData, setCurrencyData] = useState([]);
+  const [lockerData, setLockerData] = useState([]);
+  const [customerData, setCustomerData] = useState([]);
+  const [bookData, setBookData] = useState([]);
+  const [filteredCustomers, setFilteredCustomers] = useState([]);
+  const [jobDetail, setJobDetail] = useState(null);
+  const [msg, setMsg] = useState('');
+  const [addnew, setAddNew] = useState('');
+  const [custSearch, setSearchCust] = useState('');
+  const [selectedIndex, setSelectedIndex] = useState(-1);
+  const [custId, setCustID] = useState('');
+  const [currencyId, setCurrencyID] = useState('');
+  const [currencyRate, setCurrencyRate] = useState('');
+  const [lockerId, setLockerId] = useState('');
+  const [bookId, setBookId] = useState('');
+  const [jobList, setJobList] = useState([]);
+  const [billNo, setBillNo] = useState(0);
+  const [billSavedFlag, setBillSavedFlag] = useState(false);
+  const [billDataLoaded, setBillDataLoaded] = useState(false);
+  const [custErrorMsg, setCustErrorMsg] = useState('');
+  const [lockerErrorMsg, setLockerErrorMsg] = useState('');
+  const [currErrorMsg, setCurrErrorMsg] = useState('');
+  const [bookErrorMsg, setBookErrorMsg] = useState('');
+  const [disableSelect, setDisableSelect] = useState(false);
+  const [disableSelect2, setDisableSelect2] = useState(false);
+  const [disableSelect3, setDisableSelect3] = useState(false);
+  const [disableSelect4, setDisableSelect4] = useState(false);
+  const [editableFlag, setEditTableFlag] = useState(false);
+  const [deleteFlag, setDeleteFlag] = useState(true);
+  const [inpAutoFocus, setInpAutoFocus] = useState(true);
+  const [scanFlag, setScanFlag] = useState(true);
+  const [scannedValue, setScannedValue] = useState('');
+  const [printUrl, setPrintUrl] = useState(null);
+  const [printDataAPI, setPrintDataAPI] = useState();
+  const [isLoading, setIsLoading] = useState(false);
+  const [disableInp, setDisableInp] = useState(false);
+  const [open, setOpen] = useState(false);
+  const [actionType, setActionType] = useState('');
+  const [scanOff, setScanOff] = useState(false);
+  const [jobNoFocus, setJobNoFocus] = useState(true);
+  const [noJobAdd, setNoJobAdd] = useState(false);
+  const [custFocus, setCustFocus] = useState(true);
+  const location = useLocation();
+  const queryParam = location?.search;
+  const params = new URLSearchParams(queryParam);
+  const inputRef = useRef(null);
+  const custRef = useRef(null);
+  const [url, setUrl] = useState('');
+  const tkn = params.get('tkn');
+  const pid = params.get('pid');
+  const cid = params.get('cid');
+  const luid = (params?.get('LUId') === null || params?.get('LUId') === undefined) ? '' : atob(params.get('LUId'));
+  const lid = (params?.get('LId') === null || params?.get('LId') === undefined) ? '' : atob(params.get('LId'));
+  const sid = params?.get("serverid");
+  const [selectedRows, setSelectedRows] = useState([]);
+  const [roundType, setRoundType] = useState("less");
+  const [roundValue, setRoundValue] = useState("");
+  const [pendingNote, setPendingNote] = useState(true);
+  const [showRateModal, setShowRateModal] = useState(false);
+  const [totalAmount, setTotalAmount] = useState('');
+  const [roundUpTotalAmount, setRoundUpTotalAmount] = useState('');
+  const [finalTotalAmount, setFinalTotalAmount] = useState('');
+  const [deleteConfirmOpen, setDeleteConfirmOpen] = useState(false);
+  const [pendingDeleteJob, setPendingDeleteJob] = useState(null);
+  const [scanAreaVisible, setScanAreaVisible] = useState(true);
+
+  // ── Camera scanner ────────────────────────────────────────
+  const mrpVideoRef = useRef(null);
+  const mrpCanvasRef = useRef(document.createElement("canvas"));
+  const mrpStreamRef = useRef(null);
+  const mrpDecodeTimerRef = useRef(null);
+  const mrpScanningRef = useRef(false);
+  const mrpDetectorRef = useRef(
+    typeof window !== "undefined" && "BarcodeDetector" in window
+      ? new window.BarcodeDetector({ formats: ["qr_code", "code_128", "ean_13", "code_39"] })
+      : null
+  );
+  const [isCameraActive, setIsCameraActive] = useState(false);
+  const [cameraError, setCameraError] = useState(null);
+
+  // ── Bottom drawers ────────────────────────────────────────
+  const [lockerDrawerOpen, setLockerDrawerOpen] = useState(false);
+  const [currencyDrawerOpen, setCurrencyDrawerOpen] = useState(false);
+  const [bookDrawerOpen, setBookDrawerOpen] = useState(false);
+  const [billPreviewDrawerOpen, setBillPreviewDrawerOpen] = useState(false);
+  const [billPreviewAction, setBillPreviewAction] = useState(null);
+  const restoredRef = useRef(false);
+  const resumedRef = useRef(false);
+  const [datePickerDrawerOpen, setDatePickerDrawerOpen] = useState(false);
+  const [dpViewYear, setDpViewYear] = useState(() => new Date().getFullYear());
+  const [dpViewMonth, setDpViewMonth] = useState(() => new Date().getMonth());
+  const [resumeDialogOpen, setResumeDialogOpen] = useState(false);
+
+  const handleSelectAll = (e) => {
+    if (e.target.checked) {
+      const allIds = jobList.map((item) => item.StockBarcode);
+      setSelectedRows(allIds);
+    } else {
+      setSelectedRows([]);
+    }
+  };
+
+  const handleSelectRow = (id) => {
+    setSelectedRows((prev) =>
+      prev.includes(id) ? prev.filter((i) => i !== id) : [...prev, id]
+    );
+  };
+
+  const handleRateApply = (data) => {
+    const updatedList = jobList.map((item) => {
+      if (selectedRows.includes(item.StockBarcode)) {
+        const price = Number(item.salePrice);
+        let discount = 0;
+
+        if (data.value && Number(data.value) > 0) {
+          if (data.type === 'percent') {
+            discount = (price * Number(data.value)) / 100;
+          } else if (data.type === 'amount') {
+            discount = Number(data.value);
+          }
+        }
+
+        const finalPrice = price - discount;
+        return {
+          ...item,
+          DiscountAmount: discount,
+          FinalPrice: finalPrice >= 0 ? finalPrice : 0,
+          salePriceType: data.value && Number(data.value) > 0 ? data.type : '',
+          SalePriceDiscount: data.value && Number(data?.value)
+        };
+      }
+      return item;
+    });
+    setSelectedRows([]);
+    setJobList(updatedList);
+  };
+
+  const handleToggleChange = (e, newType) => {
+    if (newType !== null) setRoundType(newType);
+    setRoundValue('');
+    setRoundUpTotalAmount('');
+    setFinalTotalAmount('');
+  };
+
+  const handleValueChange = (e) => {
+    const value = parseFloat(e.target.value) || 0;
+    if (!validateTwoDecimalPlaces(value)) {
+      return;
+    }
+    setRoundValue(value);
+    let roundup = 0;
+    if (roundType === 'less') {
+      roundup = totalAmount - value;
+    } else {
+      roundup = totalAmount + value;
+    }
+    setTimeout(() => {
+      setRoundUpTotalAmount(parseFloat(roundup.toFixed(2)));
+    }, 50);
+  };
+
+
+  const handleRoundup = () => {
+    const amount = parseFloat(totalAmount || 0);
+    const decimalPart = parseFloat((amount % 1).toFixed(2));
+
+    setRoundValue(decimalPart);
+    setPendingNote(false);
+
+    const roundup =
+      roundType === "less"
+        ? parseFloat((amount - decimalPart).toFixed(2))
+        : parseFloat((amount + decimalPart).toFixed(2));
+
+    setTimeout(() => {
+      setRoundUpTotalAmount(roundup);
+    }, 50);
+  };
+
+  useEffect(() => {
+    const total = jobList?.reduce((sum, item) => sum + (Number(item.FinalPrice) || 0), 0);
+    setTotalAmount(total);
+  }, [jobList]);
+
+  useEffect(() => {
+    let url = '';
+    if (window.location?.hostname?.toLowerCase() === 'zen' || window.location?.hostname?.toLowerCase() === 'nzen' || window.location?.hostname?.toLowerCase() === 'localhost') {
+      setUrl('http://nzen/jo/api-lib/App/API_MRPBill');
+      url = 'http://nzen/jo/api-lib/App/API_MRPBill';
+    } else {
+      setUrl('https://view.optigoapps.com/linkedapp/App/API_MRPBill');
+      url = 'https://view.optigoapps.com/linkedapp/App/API_MRPBill';
+    }
+    fetchMRPData(url);
+
+  }, []);
+
+  const fetchMRPData = async (url) => {
+    try {
+      const token = `${atob(tkn)}`;
+      const fetchData = async (mode, setData, args) => {
+        const newbody = {
+          "con": `{\"id\":\"\",\"mode\":\"${mode}\",\"y\":\"\",\"appuserid\":\"\",\"IPAddress\":\"127.0.0.1\"}`,
+          "p": "{}",
+          "f": " (UserDetail)"
+        }
+
+        const response = await CommonAPI(newbody);
+        if (response?.status === 200 || response?.Status === '200') {
+          if (response?.Data?.rd?.length > 0) {
+            setData(response?.Data?.rd);
+
+            response?.Data?.rd?.forEach((e) => {
+              if (e?.IsDefault === 1) {
+                switch (args) {
+                  case 'locker':
+                    if (!resumedRef.current) {
+                      setLockerId(e?.id);
+                      setSelectLocker(e?.Lockername);
+                      setTimeout(() => { setLockerId(e?.id); setSelectLocker(e?.Lockername); }, 0)
+                    }
+                    break;
+                  case 'currency':
+                    if (!resumedRef.current) {
+                      setCurrencyID(e?.id);
+                      setSelectVal(e?.Currencycode);
+                      setTimeout(() => { setCurrencyID(e?.id); setSelectVal(e?.Currencycode); }, 0)
+                    }
+                    break;
+                  case 'book':
+                    if (!resumedRef.current) {
+                      setBookId(e?.id);
+                      setSelectBook(e?.id);
+                      setTimeout(() => { setBookId(e?.id); setSelectBook(e?.id); }, 0)
+                    }
+                    break;
+                  default:
+                    break;
+                }
+              }
+            });
+          } else {
+            setData([]);
+          }
+        } else {
+          console.log("Some Error Occurred");
+        }
+      };
+      await fetchData("GetLocker", setLockerData, 'locker');
+      await fetchData("GetCurrency", setCurrencyData, 'currency');
+      await fetchData("GetCustomer", setCustomerData, 'customer');
+      await fetchData("GetBook", setBookData, 'book');
+
+    } catch (error) {
+      toast.error("Some Error Occurred");
+    }
+
+  };
+
+  const handleCurrencyChange = (e) => {
+    setSelectVal(e.target.value);
+    setCurrErrorMsg('');
+    const selectedOption = e.target.options[e.target.selectedIndex];
+    const currencyRate = selectedOption.getAttribute('data-curr_Rate');
+    const currencyId = selectedOption.getAttribute('data-currId');
+    setCurrencyRate(currencyRate);
+    setCurrencyID(currencyId);
+    setJobnoVal('');
+    setDisableInp(false);
+  }
+
+  const handleLockerChange = (e) => {
+    setSelectLocker(e.target.value);
+    const selectedOption = e.target.options[e.target.selectedIndex];
+    const lockerId = selectedOption.getAttribute('data-lockId');
+    setLockerId(lockerId);
+    setLockerErrorMsg('');
+    setJobnoVal('');
+    setDisableInp(false);
+  }
+
+  const handleJobNoChange = (e) => {
+    setJobnoVal(e.target.value);
+    setMsg('');
+    setScanFlag(false);
+
+  }
+
+  const handleKeyDownEnter = (e) => {
+    if (searchVal !== '') {
+      if (e.key === 'Enter') {
+        if (lockerErrorMsg === '' && currErrorMsg === '' && jobnoVal !== '') {
+          setDisableInp(true);
+          handleGoClick();
+        }
+      }
+    } else {
+      setCustErrorMsg('Customer required');
+    }
+  }
+
+  const handleGoClick = async (type) => {
+    if (noJobAdd) {
+      setJobnoVal('');
+      setDisableInp(false);
+      return
+    }
+    setEditTableFlag(false);
+    const areAllSalePricesSet = () => {
+      return jobList.every(job => job.salePrice !== '');
+    };
+    const isValid = checkValidation();
+    let isCustValid = false;
+    customerData?.forEach((e) => {
+      if (e?.id === custId && e?.TypoLabel?.toLowerCase() === searchVal?.toLowerCase()) {
+        isCustValid = true;
+        setCustErrorMsg('');
+      }
+    })
+    if (searchVal !== '') {
+      if (jobnoVal !== '' && isValid && isCustValid) {
+        try {
+          setIsLoading(true);
+          const newbody = {
+            con: JSON.stringify({
+              id: "",
+              mode: "GetJobDeatil",
+              y: "",
+              appuserid: "",
+              IPAddress: "127.0.0.1"
+            }),
+            p: JSON.stringify({
+              STB: jobnoVal,
+              LockerId: lockerId,
+              CustomerId: custId
+            }),
+            f: "(UserDetail)"
+          };
+          const response = await CommonAPI(newbody);
+          if (response?.status === 200 || response?.Status === '200') {
+            if (!isEmptyObject(response?.Data)) {
+              if (response?.Data?.rd?.length > 0) {
+                if (jobList?.length > 0) {
+                  let isJobPresent = jobList?.find((al) => al?.StockBarcode === response?.Data?.rd[0]?.StockBarcode);
+                  let isJobPresent2 = jobList?.some((al) => al?.StockBarcode === response?.Data?.rd[0]?.StockBarcode);
+                  if (isJobPresent && isJobPresent2) {
+                    setMsg('Already Present');
+                    setTimeout(() => {
+                      setMsg('');
+                    }, 2000);
+                    setTimeout(() => {
+                      inputRef.current.focus();
+                      setJobNoFocus(true);
+                    }, 0);
+                    inputRef.current.focus();
+                    setJobnoVal('');
+                    setJobDetail([]);
+                    setIsLoading(false);
+                    setDisableSelect(true);
+                    setDisableSelect2(true);
+                    setDisableSelect3(true);
+                    setDisableSelect4(true);
+                    setDisableInp(false);
+                  } else {
+                    setJobDetail(response?.Data?.rd)
+                    let newobj = { ...response?.Data?.rd[0] };
+                    newobj.salePrice = newobj.IsMRPBaseSale === 1 ? newobj.NewMRP : '';
+                    newobj.FinalPrice = newobj.IsMRPBaseSale === 1 ? newobj.NewMRP : 0;
+                    setJobList((prev) => [newobj, ...prev]);
+                    setDisableSelect(true);
+                    setDisableSelect2(true);
+                    setDisableSelect3(true);
+                    setDisableSelect4(true);
+                    setMsg('')
+                    setJobnoVal('');
+                    setIsJobPresent(false);
+                    setIsLoading(false);
+                    setDisableInp(false);
+                  }
+                } else {
+                  setJobDetail(response?.Data?.rd)
+                  let newobj = { ...response?.Data?.rd[0] };
+                  newobj.salePrice = newobj.IsMRPBaseSale === 1 ? newobj.NewMRP : '';
+                  newobj.FinalPrice = newobj.IsMRPBaseSale === 1 ? newobj.NewMRP : 0;
+                  setJobList((prev) => [newobj, ...prev]);
+                  setMsg('')
+                  setJobnoVal('');
+                  setDisableSelect(true);
+                  setDisableSelect2(true);
+                  setDisableSelect3(true);
+                  setDisableSelect4(true);
+                  setIsLoading(false);
+                  setDisableInp(false);
+                }
+              } else {
+                showToast({ message: `Invalid Job`, bgColor: '#f51f4e', fontColor: 'white', duration: 2000 });
+                setJobDetail([]);
+                setJobnoVal("");
+                setDisableInp(false);
+                setMsg('')
+                setIsLoading(false);
+              }
+            } else {
+              setIsLoading(false);
+            }
+          } else {
+            setMsg('Invalid Job');
+            setTimeout(() => {
+              setMsg('');
+              inputRef.current.focus();
+              setScanFlag(true);
+              setJobnoVal('');
+            }, 3000)
+            setIsLoading(false);
+            setDisableInp(false);
+          }
+
+        } catch (error) {
+          console.log(error);
+          toast.error('Some Error Occured');
+          setIsLoading(false);
+        }
+
+      }
+    } else {
+      setCustErrorMsg('Customer required');
+      setDisableInp(false);
+    }
+  }
+
+  const isEmptyObject = (obj) => Object.keys(obj).length === 0;
+
+  const handlePriceChange = (event, obj) => {
+    const newPrice = event?.target?.value?.replace(/,/g, "");
+    if (!validateTwoDecimalPlaces(newPrice)) { return; }
+    setDisableInp(false);
+    setMsg('');
+    if (!isNaN(newPrice)) {
+      const updatedJl = jobList.map(item =>
+        item.StockBarcode === obj.StockBarcode
+          ? { ...item, salePrice: parseFloat(newPrice), FinalPrice: parseFloat(newPrice) - (parseFloat(newPrice) * (item?.SalePriceDiscount ?? 0)) / 100 }
+          : item
+      );
+      setJobList(updatedJl);
+    }
+    if (scanFlag) { setTimeout(() => { inputRef.current?.focus(); }, 1000); }
+  };
+
+  const handleJobDelete = (obj) => {
+    if (deleteFlag) {
+      setPendingDeleteJob(obj);
+      setDeleteConfirmOpen(true);
+    }
+  };
+
+  const handleDeleteConfirm = () => {
+    if (pendingDeleteJob) {
+      const updatedJL = jobList?.filter((e) => e?.StockBarcode !== pendingDeleteJob?.StockBarcode);
+      setJobList(updatedJL);
+      if (updatedJL?.length === 0) { setDisableSelect(false); }
+      setMsg('');
+      inputRef.current.focus();
+      setJobnoVal('');
+    }
+    setDeleteConfirmOpen(false);
+    setPendingDeleteJob(null);
+  };
+
+  const handleDeleteCancel = () => {
+    setDeleteConfirmOpen(false);
+    setPendingDeleteJob(null);
+  };
+
+  const handleSelectCustomer = (customer) => {
+    setCustID(customer?.id);
+    setSearchCust(customer?.TypoLabel);
+    setSearchVal(customer?.TypoLabel);
+    setFilteredCustomers([]);
+    setSelectedIndex(-1);
+    setCustErrorMsg('');
+    setJobnoVal('');
+    setInpAutoFocus(true);
+    inputRef.current?.focus();
+    setScanFlag(true);
+  };
+
+  const handleSearchCustomer = (val) => {
+    setInpAutoFocus(true);
+    setJobnoVal('');
+    let searchValue = val?.toLowerCase();
+    setSearchCust(val);
+    setSearchVal(val);
+    if (searchValue) {
+      const filtered = customerData?.filter(customer =>
+        customer?.TypoLabel?.toLowerCase()?.includes(searchValue?.toLowerCase())
+      );
+      setFilteredCustomers(filtered);
+      if (filtered?.length === 1 && filtered[0]?.TypoLabel?.toLowerCase() === searchValue?.toLowerCase()) {
+        setSearchCust(filtered[0]?.TypoLabel);
+        setSearchVal(filtered[0]?.TypoLabel);
+        inputRef.current?.focus();
+        setCustID(filtered[0]?.id);
+        setFilteredCustomers([]);
+      }
+    } else {
+      setFilteredCustomers([]);
+    }
+    setCustErrorMsg('');
+    setInpAutoFocus(true);
+  }
+
+  const handleSelectBlur = () => {
+    setTimeout(() => { setFilteredCustomers([]); setSelectedIndex(-1); }, 1000)
+    setInpAutoFocus(true);
+    setJobnoVal('');
+  }
+
+  const handleKeyDown = (e) => {
+    setJobnoVal('');
+    if (selectedIndex < filteredCustomers?.length) {
+      if (e.key === 'ArrowUp' && selectedIndex > 0) { setSelectedIndex(prev => prev - 1) }
+      else if (e.key === 'ArrowDown' && selectedIndex < filteredCustomers?.length - 1) { setSelectedIndex(prev => prev + 1) }
+      else if (e.key?.toLowerCase() === 'enter' || e.key?.toLowerCase() === 'tab' && selectedIndex >= 0) {
+        setSearchCust(filteredCustomers[selectedIndex]?.TypoLabel);
+        setSearchVal(filteredCustomers[selectedIndex]?.TypoLabel);
+        setCustID(filteredCustomers[selectedIndex]?.id);
+        setFilteredCustomers([]);
+        inputRef.current?.focus();
+        setTimeout(() => { inputRef.current?.focus(); setScanFlag(true); }, 10);
+      }
+      setTimeout(() => {
+        const element = document.querySelector(".search_sug_line.active");
+        if (element) { element.scrollIntoView({ behavior: 'smooth', block: 'nearest' }); }
+      }, 0);
+      setCustErrorMsg('');
+    } else { setCustErrorMsg(''); setSelectedIndex(-1); }
+    setInpAutoFocus(true);
+  }
+
+  const handleBookChange = (e) => {
+    setBookErrorMsg('');
+    setSelectBook(e.target.value);
+    setBookId(e.target.value);
+    setJobnoVal('');
+    setDisableInp(false);
+  }
+
+  const saveMRP = async (args) => {
+    let IsForEst = args === 'estimate' ? 1 : 0;
+    const isValid = checkValidation();
+    let is_valid = true;
+    if (!customerEnteredDate) { setCustomerEnteredDateError('Date is required'); is_valid = false; }
+    else { setCustomerEnteredDateError(''); }
+    const formatedDate = moment(customerEnteredDate).format('l');
+    const formatedRemark = customerEnteredRemark?.slice(0, 500);
+    if (!isValid || !is_valid) { return; }
+    if (jobList?.length > 0) {
+      let isEveryNot0 = jobList?.every((e) => e?.salePrice !== 0 || e?.salePrice !== '' || e?.salePrice !== null);
+      if (isEveryNot0) {
+        const bill_detail = jobList?.map((e) => ({
+          STB: e?.StockBarcode, MRP: Number(e?.salePrice),
+          discountPerAmountType: e?.salePriceType, discountPerAmountValue: e?.SalePriceDiscount,
+        }));
+        const newbody = {
+          con: JSON.stringify({ id: "", mode: "BillSave", y: "", appuserid: "", IPAddress: "127.0.0.1" }),
+          p: JSON.stringify({
+            CustomerId: custId, LockerId: lockerId, BookId: bookId, CurrencyId: currencyId,
+            CurrencyRate: currencyRate, IsForEst: IsForEst, loginid: lid, userid: luid,
+            date: formatedDate, remark: formatedRemark, RoundupType: roundType,
+            RoundupValue: roundValue, BillDetail: bill_detail
+          }),
+          f: "(UserDetail)"
+        };
+        try {
+          setIsLoading(true);
+          const response = await CommonAPI(newbody);
+          if (response?.status === 200 || response?.Status === '200') {
+            setPrintDataAPI(response?.Data);
+            setBillNo(response?.Data?.rd[0]?.BillNo);
+            setPrintUrl(atob(response?.Data?.rd[0]?.PrintUrl));
+            setBillDataLoaded(false);
+            setBillSavedFlag(true);
+            setTimeout(() => { setDisableInp(true); }, 0)
+            setRoundValue('');
+            setRoundUpTotalAmount('');
+            setIsLoading(false);
+          } else { toast.error("Some Error Occured"); setIsLoading(false); }
+        } catch (error) { console.log(error); toast.error('Some Error Occured'); }
+      }
+    }
+  }
+
+  const checkValidation = () => {
+    let isValid = true;
+    if (!custId && searchVal !== '') { setCustErrorMsg('Customer is required'); isValid = false; } else { setCustErrorMsg(''); }
+    if (!lockerId) { setLockerErrorMsg('Locker is required'); isValid = false; } else { setLockerErrorMsg(''); }
+    if (!currencyId) { setCurrErrorMsg('Currency is required'); isValid = false; } else { setCurrErrorMsg(''); }
+    if (!bookId) { setBookErrorMsg('Book is required'); isValid = false; } else { setBookErrorMsg(''); }
+    return isValid;
+  };
+
+  const saveNextBill = (e, mode) => {
+    setEditTableFlag(false);
+    setJobDetail(null); setMsg(''); setSearchCust(''); setSelectedIndex(-1); setCustID('');
+    setCurrencyID(''); setLockerId(''); setCurrencyRate(''); setJobList([]); setSearchVal('');
+    setSelectVal(''); setSelectLocker(''); setJobnoVal(''); setIsJobPresent(false);
+    setDisableSelect(false); setBillSavedFlag(false); setBillDataLoaded(false); setDisableInp(false);
+    setTimeout(() => { setDisableInp(false) }, 0);
+    setLockerErrorMsg(''); setCustErrorMsg(''); setBookErrorMsg('');
+    setDisableSelect2(false); setDisableSelect3(false); setDisableSelect4(false);
+    custRef.current?.focus();
+    setTimeout(() => { custRef.current?.focus(); }, 0);
+    setScanFlag(true);
+    setCustomerEnteredRemarkError(''); setCustomerEnteredDateError('');
+    if (mode !== 'next') { setCustomerEnterDate(getTodayStr()); }
+    setCustomerEnteredRemark(''); setDateRemarkFlag(false);
+    setNoJobAdd(false);
+    setScanOff(false);              // ← unblocks keyboard scanner listener
+    setScannedValue('');            // ← clears stale scanned value
+    mrpScanningRef.current = false; // ← unblocks camera decoder
+    resumedRef.current = false;
+    sessionStorage.removeItem("MRPBillCustomer"); sessionStorage.removeItem("MRPBillLocker");
+    sessionStorage.removeItem("MRPBillCurrency"); sessionStorage.removeItem("MRPBillBook");
+    if (mode !== 'next') { sessionStorage.removeItem("MRPBillDate"); }
+    sessionStorage.removeItem("MRPBillJobList");
+  };
+
+  const handlePrintUrl = () => {
+    let printUrl1 = printUrl + `&srvid=${sid}`;
+    window.open(printUrl1, '_blank');
+  }
+
+  useEffect(() => {
+    if (cid) {
+      customerData?.forEach((e) => {
+        if (e?.id === Number(atob(cid))) {
+          setSearchVal(e?.TypoLabel); setSearchCust(e?.TypoLabel);
+          setCustID(Number(atob(cid))); setDisableSelect(true);
+        }
+      })
+    }
+  }, [cid, customerData])
+
+  useEffect(() => {
+    if (jobList?.length === 0) {
+      setDisableSelect(false); setDisableSelect2(false); setDisableSelect3(false); setDisableSelect4(false);
+    }
+  }, [jobList]);
+
+  const handleClickOpen = (type) => {
+    let is_valid = true;
+    if (!customerEnteredDate) { setCustomerEnteredDateError('Date is required'); is_valid = false; }
+    else { setCustomerEnteredDateError(''); }
+    const isValid = checkValidation();
+    if (is_valid && isValid) { setActionType(type); setOpen(true); }
+  };
+
+  const handleClose = () => { setOpen(false); };
+
+  const handleConfirm = () => {
+    if (actionType === 'bill') { saveMRP('bill'); }
+    else if (actionType === 'estimate') { saveMRP('estimate'); }
+    setOpen(false);
+  };
+
+  const handleContinue = () => {
+    setEditTableFlag(true);
+    setScanOff(true);
+    setTimeout(() => { inputRef.current.focus(); setNoJobAdd(true); setScanFlag(false); }, 0)
+    setNoJobAdd(true);
+    setDisableInp(true);
+    setDateRemarkFlag(true);
+    setDeleteFlag(false);
+    setRoundValue('');
+    let roundup = roundType === 'less' ? totalAmount - roundValue : totalAmount + roundValue;
+    setRoundUpTotalAmount(parseFloat(isNaN(Number(roundup)) ? 0 : Number(roundup).toFixed(2)));
+    if (roundValue != 0 || roundValue != '') { setPendingNote(false); } else { setPendingNote(true); }
+  };
+
+  const handleBack = () => {
+    setEditTableFlag(false);
+    setScannedValue('');
+    setScanOff(true);
+    setScanFlag(false);
+    setNoJobAdd(false);
+    setJobnoVal('');
+    setPendingNote(true);
+    setDisableInp(false);
+    setRoundType('less');
+    setRoundValue('');
+    inputRef.current.focus();
+    setTimeout(() => { setDisableInp(false); inputRef.current.focus(); setScanFlag(true); }, 10);
+    setDateRemarkFlag(false);
+    setDeleteFlag(true);
+  };
+
+  const handleScanFlagAndComp = (args) => {
+    let isCustValid = false;
+    customerData?.forEach((e) => {
+      if (e?.id === custId && e?.TypoLabel?.toLowerCase() === searchVal?.toLowerCase()) {
+        isCustValid = true; setCustErrorMsg('');
+      }
+    })
+    if (args === 'f2') { inputRef.current?.focus(); }
+    if (searchVal !== '' && isCustValid) { setScanFlag(!scanFlag); setInpAutoFocus(true); }
+    else { setCustErrorMsg('Select Valid Customer'); }
+  }
+
+  useEffect(() => {
+    if (scannedValue && !noJobAdd) {
+      if (!scanOff) { handleScanJob(scannedValue); }
+    }
+  }, [scannedValue]);
+
+  const handleScanJob = async () => {
+    if (!noJobAdd) {
+      try {
+        const newbody = {
+          con: JSON.stringify({ id: "", mode: "GetJobDeatil", y: "", appuserid: "", IPAddress: "127.0.0.1" }),
+          p: JSON.stringify({ STB: scannedValue, LockerId: lockerId, CustomerId: custId }),
+          f: "(UserDetail)"
+        };
+        setIsLoading(true);
+        const response = await CommonAPI(newbody);
+        if (response?.status === 200 || response?.Status === '200') {
+          if (!isEmptyObject(response?.Data)) {
+            if (response?.Data?.rd?.length > 0) {
+              if (jobList?.length > 0) {
+                let isJobPresent = jobList?.find((al) => al?.StockBarcode === response?.Data?.rd[0]?.StockBarcode);
+                if (isJobPresent) {
+                  setMsg('Already Present');
+                  setTimeout(() => { setMsg(''); }, 2000);
+                  setTimeout(() => { inputRef.current.focus(); setJobNoFocus(true); }, 0);
+                  setJobnoVal(''); setJobNoFocus(true); inputRef.current.focus();
+                  setJobDetail([]); setIsLoading(false);
+                  setDisableSelect(true); setDisableSelect2(true); setDisableSelect3(true); setDisableSelect4(true);
+                } else {
+                  setJobDetail(response?.Data?.rd)
+                  let newobj = { ...response?.Data?.rd[0] };
+                  newobj.salePrice = newobj.IsMRPBaseSale === 1 ? newobj.NewMRP : '';
+                  newobj.FinalPrice = newobj.IsMRPBaseSale === 1 ? newobj.NewMRP : 0;
+                  setJobList((prev) => [newobj, ...prev]);
+                  setDisableSelect(true); setDisableSelect2(true); setDisableSelect3(true); setDisableSelect4(true);
+                  setMsg(''); setJobnoVal(''); setIsJobPresent(false); setIsLoading(false);
+                }
+              } else {
+                setJobDetail(response?.Data?.rd)
+                let newobj = { ...response?.Data?.rd[0] };
+                newobj.salePrice = newobj.IsMRPBaseSale === 1 ? newobj.NewMRP : '';
+                newobj.FinalPrice = newobj.IsMRPBaseSale === 1 ? newobj.NewMRP : 0;
+                setJobList((prev) => [newobj, ...prev]);
+                setMsg(''); setJobnoVal(''); setIsJobPresent(false);
+                setDisableSelect(true); setDisableSelect2(true); setDisableSelect3(true); setDisableSelect4(true);
+                setIsLoading(false);
+              }
+            } else {
+              setJobDetail([]);
+              setDisableInp(false);
+              showToast({ message: `Invalid Job`, bgColor: '#f51f4e', fontColor: 'white', duration: 2000 });
+              setMsg(''); setIsJobPresent(false); setIsLoading(false);
+            }
+          } else { setIsJobPresent(false); setIsLoading(false); }
+        } else {
+          setTimeout(() => { setMsg('Scanned Job Invalid'); inputRef.current.focus(); setJobnoVal(''); }, 3000)
+          setIsJobPresent(false); setIsLoading(false);
+        }
+      } catch (error) { console.log(error); toast.error('Some Error Occured'); setIsLoading(false); }
+    }
+  }
+
+  useEffect(() => {
+    if (!scanOff) {
+      const handleScan = (event) => {
+        if (event.key === 'Enter') {
+          const value = event.target.value.trim();
+          if (value) {
+            if (currencyId !== '' && lockerId !== '' && custId !== '' && bookId !== '' && customerEnteredDate !== '') {
+              setScannedValue('');           // ← reset first
+              setTimeout(() => {
+                setScannedValue(value);      // ← then set (re-fires even for same barcode)
+              }, 0);
+              event.target.value = '';
+            } else {
+              if (custId === '') {
+                setCustErrorMsg('Customer required');
+              } else {
+                setCustErrorMsg('');
+              }
+              if (lockerId === '') {
+                setLockerErrorMsg('Locker required');
+              } else {
+                setLockerErrorMsg('');
+              }
+              if (currencyId === '') {
+                setCurrErrorMsg('Currency required');
+              } else {
+                setCurrErrorMsg('');
+              }
+              if (bookId === '') {
+                setBookErrorMsg('Book required');
+              } else {
+                setBookErrorMsg('');
+              }
+              setIsLoading(false);
+              setJobnoVal('');
+              setDisableInp(false);
+            }
+          }
+        }
+      };
+
+      const inputElement = document?.getElementById('scanner-input');
+      inputElement?.addEventListener('keydown', handleScan);
+      setMsg('');
+
+      return () => {
+        inputElement?.removeEventListener('keydown', handleScan);
+      };
+    }
+  }, [currencyId, lockerId, custId, bookId, scanOff]);
+
+  //focus true event
+  useEffect(() => {
+    if (scanFlag) {
+      setInpAutoFocus(true);
+    }
+  }, [scanFlag]);
+
+  //F2 key event
+  useEffect(() => {
+    const handleKeyDown = (e) => {
+      if (e?.key === 'F2') {
+        setScanFlag(true);
+        setJobnoVal('');
+        setDisableInp(false);
+        inputRef.current?.focus();
+      }
+    }
+    window.addEventListener('keydown', handleKeyDown);
+    return () => {
+      window.removeEventListener('keydown', handleKeyDown);
+    };
+  }, [])
+
+  //sale price focus and key logic
+  const handleSalePriceKeyDown = (e) => {
+    if (e?.key === 'Enter' || e?.key === 'enter') {
+      inputRef.current?.focus();
+      setScanFlag(true);
+      setJobnoVal('');
+      setJobNoFocus(true);
+      setDisableInp(false);
+      setMsg('');
+    } else {
+      setScanFlag(false);
+    }
+
+  }
+
+  const handleSalePriceFocus = (e) => {
+    setScanOff(true);
+    setTimeout(() => {
+      setScanOff(true);
+    }, 10)
+    inputRef.current?.blur();
+  }
+
+  //focus on customer at starting
+  useEffect(() => {
+    if (custId === '') {
+      setCustFocus(true);
+      setTimeout(() => {
+        setCustFocus(true);
+        custRef.current.focus();
+        setScanFlag(false);
+      }, 20);
+    }
+  }, []);
+
+  //customer entered date
+  const handleCustomerEnteredDate = (e) => {
+    const custEnteredDate = e.target.value;
+    setCustomerEnterDate(custEnteredDate);
+    setCustomerEnteredDateError('');
+  }
+
+  //customer entered remark
+  const handleCustomerEnteredRemark = (e) => {
+    const custEnteredRemark = e.target.value;
+    setCustomerEnteredRemark(custEnteredRemark);
+    setCustomerEnteredRemarkError('');
+  }
+
+  // ── Date picker helpers ──────────────────────────────────────────────────────
+  const formatDisplayDate = (dateStr) => {
+    if (!dateStr) return '';
+    const [y, m, d] = dateStr.split('-');
+    return `${d} ${DP_MONTHS[parseInt(m, 10) - 1]?.slice(0, 3)} ${y}`;
+  };
+
+  const handleOpenDatePicker = () => {
+    if (customerEnteredDate) {
+      const [y, m] = customerEnteredDate.split('-');
+      setDpViewYear(parseInt(y, 10));
+      setDpViewMonth(parseInt(m, 10) - 1);
+    }
+    setDatePickerDrawerOpen(true);
+  };
+
+  const handleDpSelectDay = (day) => {
+    const m = String(dpViewMonth + 1).padStart(2, '0');
+    const d = String(day).padStart(2, '0');
+    setCustomerEnterDate(`${dpViewYear}-${m}-${d}`);
+    setCustomerEnteredDateError('');
+    setDatePickerDrawerOpen(false);
+  };
+
+  const handleDpPrevMonth = () => {
+    if (dpViewMonth === 0) { setDpViewMonth(11); setDpViewYear(y => y - 1); }
+    else setDpViewMonth(m => m - 1);
+  };
+
+  const handleDpNextMonth = () => {
+    if (dpViewMonth === 11) { setDpViewMonth(0); setDpViewYear(y => y + 1); }
+    else setDpViewMonth(m => m + 1);
+  };
+
+  // ── Resume / discard session ─────────────────────────────────────────────────
+  const applyResumeData = () => {
+    resumedRef.current = true;
+    try { const c = sessionStorage.getItem("MRPBillCustomer"); if (c) { const { custId: id, searchVal: sv } = JSON.parse(c); if (id && sv) { setCustID(id); setSearchVal(sv); setSearchCust(sv); } } } catch (_) { }
+    try { const l = sessionStorage.getItem("MRPBillLocker"); if (l) { const { lockerId: id, selectLocker: sl } = JSON.parse(l); if (id) { setLockerId(id); setSelectLocker(sl || ""); } } } catch (_) { }
+    try { const cu = sessionStorage.getItem("MRPBillCurrency"); if (cu) { const { currencyId: id, selectVal: sv, currencyRate: cr } = JSON.parse(cu); if (id) { setCurrencyID(id); setSelectVal(sv || ""); setCurrencyRate(cr || ""); } } } catch (_) { }
+    try { const b = sessionStorage.getItem("MRPBillBook"); if (b) { const { bookId: id, selectBook: sb } = JSON.parse(b); if (id) { setBookId(id); setSelectBook(sb || id); } } } catch (_) { }
+    try { const d = sessionStorage.getItem("MRPBillDate"); if (d) { const { customerEnteredDate: dt } = JSON.parse(d); if (dt) setCustomerEnterDate(dt); } } catch (_) { }
+    setResumeDialogOpen(false);
+  };
+
+  const discardResumeData = () => {
+    resumedRef.current = false;
+    sessionStorage.removeItem("MRPBillCustomer");
+    sessionStorage.removeItem("MRPBillLocker");
+    sessionStorage.removeItem("MRPBillCurrency");
+    sessionStorage.removeItem("MRPBillBook");
+    sessionStorage.removeItem("MRPBillDate");
+    sessionStorage.removeItem("MRPBillJobList");
+    setJobList([]);
+    setCustID(''); setSearchVal(''); setSearchCust('');
+    setDisableSelect(false); setDisableSelect2(false); setDisableSelect3(false); setDisableSelect4(false);
+    setResumeDialogOpen(false);
+  };
+
+  // ── Check for saved session → show resume dialog immediately on mount ─────────
+  useEffect(() => {
+    const hasAny = !!sessionStorage.getItem("MRPBillCustomer");
+    if (hasAny) setResumeDialogOpen(true);
+  }, []);
+
+  // ── Restore scanned job list on mount ────────────────────
+  useEffect(() => {
+    const savedJobs = sessionStorage.getItem("MRPBillJobList");
+    if (!savedJobs) return;
+    try {
+      const parsed = JSON.parse(savedJobs);
+      if (Array.isArray(parsed) && parsed.length > 0) {
+        setJobList(parsed);
+        setDisableSelect(true);
+        setDisableSelect2(true);
+        setDisableSelect3(true);
+        setDisableSelect4(true);
+      }
+    } catch (e) { }
+  }, []);
+
+  // ── Save: Customer ─────────────────────────────────────
+  useEffect(() => {
+    if (custId) sessionStorage.setItem("MRPBillCustomer", JSON.stringify({ custId, searchVal }));
+  }, [custId, searchVal]);
+
+  // ── Save: Locker ──────────────────────────────────────
+  useEffect(() => {
+    if (lockerId) sessionStorage.setItem("MRPBillLocker", JSON.stringify({ lockerId, selectLocker }));
+  }, [lockerId, selectLocker]);
+
+  // ── Save: Currency ────────────────────────────────────
+  useEffect(() => {
+    if (currencyId) sessionStorage.setItem("MRPBillCurrency", JSON.stringify({ currencyId, selectVal, currencyRate }));
+  }, [currencyId, selectVal, currencyRate]);
+
+  // ── Save: Book ────────────────────────────────────────
+  useEffect(() => {
+    if (bookId) sessionStorage.setItem("MRPBillBook", JSON.stringify({ bookId, selectBook }));
+  }, [bookId, selectBook]);
+
+  // ── Save: Date ────────────────────────────────────────
+  useEffect(() => {
+    if (customerEnteredDate) sessionStorage.setItem("MRPBillDate", JSON.stringify({ customerEnteredDate }));
+  }, [customerEnteredDate]);
+
+  // ── Save jobList (scanned items) to sessionStorage ────────
+  useEffect(() => {
+    if (jobList.length > 0) {
+      sessionStorage.setItem("MRPBillJobList", JSON.stringify(jobList));
+    } else {
+      sessionStorage.removeItem("MRPBillJobList");
+    }
+  }, [jobList]);
+
+  // ── Camera scanner functions ──────────────────────────────
+  const MRP_CANVAS_SIDE = 400;
+  const mrpHasBarcodeAPI = typeof window !== "undefined" && "BarcodeDetector" in window;
+
+  const decodeMrpFrame = async () => {
+    if (mrpScanningRef.current) return;
+    const video = mrpVideoRef.current;
+    if (!video || video.readyState < 2) return;
+    const { videoWidth: w, videoHeight: h } = video;
+    const side = Math.min(w, h);
+    const sx = (w - side) / 2;
+    const sy = (h - side) / 2;
+    const ctx = mrpCanvasRef.current.getContext("2d", { willReadFrequently: true });
+    ctx.drawImage(video, sx, sy, side, side, 0, 0, MRP_CANVAS_SIDE, MRP_CANVAS_SIDE);
+    let result = null;
+    if (mrpHasBarcodeAPI && mrpDetectorRef.current) {
+      try {
+        const barcodes = await mrpDetectorRef.current.detect(mrpCanvasRef.current);
+        if (barcodes.length) result = barcodes[0].rawValue;
+      } catch (_) { }
+    }
+    if (!result) {
+      const imgData = ctx.getImageData(0, 0, MRP_CANVAS_SIDE, MRP_CANVAS_SIDE);
+      const code = jsQR(imgData.data, imgData.width, imgData.height);
+      result = code?.data;
+    }
+    if (result) {
+      mrpScanningRef.current = true;
+      clearInterval(mrpDecodeTimerRef.current);
+      setScannedValue("");                          // ← reset first
+      setTimeout(() => {
+        setScannedValue(result.trim());             // ← then set new value
+      }, 0);
+      setTimeout(() => { mrpScanningRef.current = false; }, 2000);
+      setIsCameraActive(false);
+    }
+  };
+
+  const startMrpCamera = async () => {
+    setCameraError(null);
+    try {
+      if (mrpStreamRef.current) {
+        mrpStreamRef.current.getTracks().forEach(t => t.stop());
+        mrpStreamRef.current = null;
+      }
+      clearInterval(mrpDecodeTimerRef.current);
+      mrpScanningRef.current = false;
+      let stream;
+      try {
+        stream = await navigator.mediaDevices.getUserMedia({
+          video: { facingMode: { ideal: "environment" }, width: { ideal: 640 }, height: { ideal: 320 } },
+          audio: false
+        });
+      } catch (_) {
+        stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: "environment" }, audio: false });
+      }
+      mrpStreamRef.current = stream;
+      const video = mrpVideoRef.current;
+      if (video) {
+        video.srcObject = stream;
+        video.onloadedmetadata = () => { video.play().catch(() => {}); };
+      }
+      mrpCanvasRef.current.width = MRP_CANVAS_SIDE;
+      mrpCanvasRef.current.height = MRP_CANVAS_SIDE;
+      mrpDecodeTimerRef.current = setInterval(decodeMrpFrame, 200);
+    } catch (err) {
+      setIsCameraActive(false);
+      setCameraError('Camera access denied or unavailable. Please allow camera permission and try again.');
+    }
+  };
+
+  const stopMrpCamera = () => {
+    clearInterval(mrpDecodeTimerRef.current);
+    mrpDecodeTimerRef.current = null;
+    if (mrpStreamRef.current) {
+      mrpStreamRef.current.getTracks().forEach(t => t.stop());
+      mrpStreamRef.current = null;
+    }
+    if (mrpVideoRef.current) {
+      mrpVideoRef.current.srcObject = null;
+    }
+    setIsCameraActive(false);
+  };
+
+  // ── Stop camera on unmount ──────────────────────────────
+  useEffect(() => {
+    return () => {
+      clearInterval(mrpDecodeTimerRef.current);
+      if (mrpStreamRef.current) {
+        mrpStreamRef.current.getTracks().forEach(t => t.stop());
+        mrpStreamRef.current = null;
+      }
+      if (mrpVideoRef.current) {
+        mrpVideoRef.current.srcObject = null;
+      }
+    };
+  }, []);
+
+  // ── Bill PDF download ─────────────────────────────────────
+  const handleBillDownload = () => {
+    const element = document.getElementById("mrpBillPrintSection");
+    if (!element) return;
+    html2pdf()
+      .set({ margin: [5, 5, 5, 5], filename: `bill_${billNo}.pdf`, image: { type: "jpeg", quality: 0.98 }, html2canvas: { scale: 2 }, jsPDF: { unit: "mm", format: "a4", orientation: "portrait" } })
+      .from(element).outputPdf("blob")
+      .then((blob) => {
+        const fileName = `bill_${billNo}.pdf`;
+        if (window.flutter_inappwebview) {
+          const reader = new FileReader();
+          reader.onloadend = () => window.flutter_inappwebview.callHandler("downloadPDF", reader.result.split(",")[1], fileName);
+          reader.readAsDataURL(blob);
+        } else {
+          const link = document.createElement("a");
+          link.href = URL.createObjectURL(blob);
+          link.download = fileName;
+          document.body.appendChild(link); link.click(); link.remove();
+        }
+      });
+  };
+
+  // ── Bill PDF share ────────────────────────────────────────
+  const handleBillShare = () => {
+    const element = document.getElementById("mrpBillPrintSection");
+    if (!element) return;
+    html2pdf()
+      .set({ margin: [5, 5, 5, 5], filename: `bill_${billNo}.pdf`, image: { type: "jpeg", quality: 0.98 }, html2canvas: { scale: 2 }, jsPDF: { unit: "mm", format: "a4", orientation: "portrait" } })
+      .from(element).outputPdf("blob")
+      .then((blob) => {
+        const fileName = `bill_${billNo}.pdf`;
+        if (window.flutter_inappwebview) {
+          const reader = new FileReader();
+          reader.onloadend = () => window.flutter_inappwebview.callHandler("sharePDF", reader.result.split(",")[1], fileName);
+          reader.readAsDataURL(blob);
+        } else if (navigator.share) {
+          navigator.share({ files: [new File([blob], fileName, { type: "application/pdf" })], title: `Bill ${billNo}` }).catch(() => { });
+        } else {
+          const link = document.createElement("a");
+          link.href = URL.createObjectURL(blob);
+          link.download = fileName;
+          document.body.appendChild(link); link.click(); link.remove();
+        }
+      });
+  };
+
+  const allSelected =
+    jobList.length > 0 && selectedRows.length === jobList.length;
+
+  // All 5 fields filled check
+  const allFieldsFilled =
+    custId !== '' &&
+    lockerId !== '' &&
+    currencyId !== '' &&
+    bookId !== '' &&
+    customerEnteredDate !== '';
+
+  return (
+    <div className="mrp-page">
+
+      {/* ── Loader ───────────────────────────────── */}
+      {isLoading && (
+        <div className="loader-overlay">
+          <CircularProgress className="loadingBarManage" />
+        </div>
+      )}
+      <div className="mrp-card">
+        <div className="mrp-form-grid">
+
+          {/* Date picker — mobile-friendly bottom drawer */}
+          <div className="mrp-field span-full">
+            <label className="mrp-field__label">
+              Date <span style={{ color: 'red' }}>*</span>
+            </label>
+            <button
+              type="button"
+              className={`mrp-dp-trigger${customerEnteredDateError ? ' mrp-dp-trigger--error' : ''}`}
+              onClick={handleOpenDatePicker}
+            >
+              <CalendarDays size={16} color="black"/>
+              <span className="mrp-dp-trigger__text">
+                {customerEnteredDate ? formatDisplayDate(customerEnteredDate) : 'Select Date'}
+              </span>
+              <svg width="10" height="6" viewBox="0 0 10 6" xmlns="http://www.w3.org/2000/svg"><path fill="#9349d2" d="M0 0l5 6 5-6z" /></svg>
+            </button>
+            {customerEnteredDateError && (
+              <div className="mrp-field__error">{customerEnteredDateError}</div>
+            )}
+          </div>
+
+          {/* Customer Name */}
+          <div className="mrp-field">
+            <label className="mrp-field__label" htmlFor="custtitle">
+              Customer Name <span style={{ color: 'red' }}>*</span>
+            </label>
+            <input
+              type="text"
+              id="custtitle"
+              className="mrp-field__input"
+              value={searchVal}
+              placeholder="e.g. Robert Downey…"
+              onChange={(e) => handleSearchCustomer(e.target.value)}
+              onBlur={() => handleSelectBlur()}
+              onKeyDown={handleKeyDown}
+              disabled={disableSelect}
+              autoComplete="off"
+              autoFocus={custFocus}
+              ref={custRef}
+            />
+            {filteredCustomers?.length > 0 && (
+              <ul className="mrp-field__dropdown">
+                {filteredCustomers.map((customer, index) => (
+                  <li
+                    key={index}
+                    className={selectedIndex === index ? 'active' : ''}
+                    onMouseDown={() => handleSelectCustomer(customer)}
+                  >
+                    {customer?.TypoLabel}
+                  </li>
+                ))}
+              </ul>
+            )}
+            <div className="mrp-field__error">{custErrorMsg}</div>
+          </div>
+
+          {/* Locker */}
+          <div className="mrp-field">
+            <label className="mrp-field__label" htmlFor="locker">
+              Locker <span style={{ color: 'red' }}>*</span>
+            </label>
+            <button
+              className={`mrp-drawer-trigger${disableSelect2 ? ' mrp-drawer-trigger--disabled' : ''}`}
+              onClick={() => !disableSelect2 && setLockerDrawerOpen(true)}
+              disabled={disableSelect2}
+              type="button"
+            >
+              <span>{selectLocker || 'Select Locker'}</span>
+              <svg width="10" height="6" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 10 6"><path fill="#6c3fc5" d="M0 0l5 6 5-6z" /></svg>
+            </button>
+            <div className="mrp-field__error">{lockerErrorMsg}</div>
+          </div>
+
+          {/* Currency */}
+          <div className="mrp-field">
+            <label className="mrp-field__label" htmlFor="currency">
+              Currency <span style={{ color: 'red' }}>*</span>
+            </label>
+            <button
+              className={`mrp-drawer-trigger${disableSelect3 ? ' mrp-drawer-trigger--disabled' : ''}`}
+              onClick={() => !disableSelect3 && setCurrencyDrawerOpen(true)}
+              disabled={disableSelect3}
+              type="button"
+            >
+              <span>{selectVal || 'Select Currency'}</span>
+              <svg width="10" height="6" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 10 6"><path fill="#6c3fc5" d="M0 0l5 6 5-6z" /></svg>
+            </button>
+            <div className="mrp-field__error">{currErrorMsg}</div>
+          </div>
+
+          {/* Books */}
+          <div className="mrp-field">
+            <label className="mrp-field__label" htmlFor="books">
+              Books <span style={{ color: 'red' }}>*</span>
+            </label>
+            <button
+              className={`mrp-drawer-trigger${disableSelect4 ? ' mrp-drawer-trigger--disabled' : ''}`}
+              onClick={() => !disableSelect4 && setBookDrawerOpen(true)}
+              disabled={disableSelect4}
+              type="button"
+            >
+              <span>{bookData?.find(e => String(e.id) === String(bookId))?.BookName || 'Select Book'}</span>
+              <svg width="10" height="6" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 10 6"><path fill="#6c3fc5" d="M0 0l5 6 5-6z" /></svg>
+            </button>
+            <div className="mrp-field__error">{bookErrorMsg}</div>
+          </div>
+
+
+
+        </div>
+      </div>
+      {/* /header card */}
+
+      <div className="scan-area-wrapper">
+        <button
+          className="scan-area-toggle"
+          type="button"
+          onClick={() => {
+            if (isCameraActive) stopMrpCamera();
+            setScanAreaVisible(v => !v);
+          }}
+        >
+          <QrCodeScannerIcon style={{ fontSize: 16 }} />
+          <span>Scan Here</span>
+          <svg
+            className={`scan-area-toggle__chevron${scanAreaVisible ? ' open' : ''}`}
+            width="12" height="8" viewBox="0 0 12 8" xmlns="http://www.w3.org/2000/svg"
+          >
+            <path d="M1 1l5 6 5-6" stroke="currentColor" strokeWidth="1.8" fill="none" strokeLinecap="round" strokeLinejoin="round" />
+          </svg>
+        </button>
+
+        {scanAreaVisible && (
+          <div className={`scan-area${isCameraActive ? ' scan-area--camera' : ''}`}>
+            {!allFieldsFilled ? (
+              <div className="scan-idle" style={{ opacity: 0.4, pointerEvents: 'none' }}>
+                <div className="scan-idle__ring"><QrCodeScannerIcon /></div>
+                <div className="scan-idle__title">Fill all fields to enable scan</div>
+                <div className="scan-idle__sub">Customer, Locker, Currency, Books, Date required</div>
+              </div>
+            ) : (
+              <>
+                <div className="mrp-camera-wrap" style={{ display: isCameraActive ? 'flex' : 'none' }}>
+                  <video
+                    ref={mrpVideoRef}
+                    autoPlay
+                    playsInline
+                    muted
+                    className="mrp-camera-feed"
+                  />
+                  <div className="mrp-scan-box" />
+                  <button className="mrp-camera-close" onClick={stopMrpCamera} type="button">
+                    <CloseX size={18} />
+                  </button>
+                  <div className="mrp-scan-hint">Point at barcode or QR code</div>
+                </div>
+                {!isCameraActive && !cameraError && (
+                  <div className="scan-active-state" onClick={() => { handleScanFlagAndComp('scan'); startMrpCamera(); }}>
+                    <div className="scan-idle__ring scan-idle__ring--pulse"><QrCodeScannerIcon /></div>
+                    <div className="scan-idle__title">Tap to open camera scanner</div>
+                    <div className="scan-idle__sub">Barcode &amp; QR code supported</div>
+                  </div>
+                )}
+                {cameraError && (
+                  <div className="scan-active-state" style={{ flexDirection: 'column', gap: 8 }}>
+                    <div className="scan-idle__ring" style={{ color: '#e53935' }}><QrCodeScannerIcon /></div>
+                    <div className="scan-idle__title" style={{ color: '#e53935', fontSize: 13 }}>{cameraError}</div>
+                    <button
+                      type="button"
+                      style={{ marginTop: 6, padding: '6px 18px', borderRadius: 20, background: '#9349d2', color: '#fff', border: 'none', fontWeight: 600, fontSize: 13, cursor: 'pointer' }}
+                      onClick={() => { setCameraError(null); startMrpCamera(); }}
+                    >Retry</button>
+                  </div>
+                )}
+              </>
+            )}
+          </div>
+        )}
+      </div>
+
+      <div className="job-input-row">
+        <input
+          className="job-input"
+          id="jobno"
+          type="text"
+          value={jobnoVal}
+          placeholder={allFieldsFilled ? "Enter job number" : "Fill all fields first…"}
+          onChange={handleJobNoChange}
+          onKeyDown={handleKeyDownEnter}
+          disabled={!!disableInp || !allFieldsFilled}
+          autoFocus={jobNoFocus}
+          ref={inputRef}
+          autoComplete="off"
+          onFocus={() => setTimeout(() => inputRef.current?.scrollIntoView({ behavior: 'smooth', block: 'center' }), 450)}
+        />
+        <button
+          className="btn-go"
+          disabled={jobnoVal === '' || !allFieldsFilled}  // ← add !allFieldsFilled
+          onClick={handleGoClick}
+        >
+          GO
+        </button>
+      </div>
+
+      {msg && <div className="job-input-msg">{msg}</div>}
+
+      <div className="job-card-list">
+        <div className="job-card-list__select-all">
+          {jobList?.length >= 2 &&
+            <label className="job-check-label">
+              <input
+                type="checkbox"
+                className="job-check"
+                checked={allSelected}
+                onChange={handleSelectAll}
+              />
+              <span>Select all</span>
+            </label>
+          }
+          <button
+            className="btn-apply-discount"
+            type="button"
+            onClick={() => setShowRateModal(true)}
+            disabled={selectedRows.length === 0}
+          >
+            Apply Discount
+          </button>
+        </div>
+
+        {/* ── Job cards ── */}
+        {jobList.map((job, index) => {
+          const isSelected = selectedRows.includes(job.StockBarcode);
+          const detail = jobDetail?.find((d) => d.StockBarcode === job.StockBarcode);
+
+          return (
+            <div
+              key={job.StockBarcode || index}
+              className={`job-card ${isSelected ? 'job-card--selected' : ''}`}
+            >
+              {/* Checkbox */}
+              <input
+                type="checkbox"
+                className="job-card__check"
+                checked={isSelected}
+                onChange={() => handleSelectRow(job.StockBarcode)}
+              />
+
+              {/* Thumbnail */}
+              <div className="job-card__thumb-wrap">
+                {job.DesignImage ? (
+                  <img
+                    src={job.DesignImage}
+                    alt={job.DesignImage || 'job'}
+                    className="job-card__thumb"
+                    onError={handleImageError}
+                  />
+                ) : (
+                  <div className="job-card__thumb job-card__thumb--placeholder" />
+                )}
+              </div>
+
+              {/* Info */}
+              <div className="job-card__info">
+                <div className="job-card__name">
+                  {job.JobName || job.StockBarcode}
+                </div>
+                <div className="job-card__sub">
+                  {job.Description || '—'}
+                </div>
+
+                {/* Price fields */}
+                <div className="job-card__prices">
+                  <div className="price-col">
+                    <label>Amount</label>
+                    <input
+                      type="number"
+                      value={job.salePrice ?? ''}
+                      onChange={(e) => handlePriceChange(e, job)}
+                      onKeyDown={handleSalePriceKeyDown}
+                      disabled={editableFlag}
+                      placeholder="Amount"
+                      onFocus={(e) => {
+                        handleSalePriceFocus(e);
+                        setTimeout(() => {
+                          e.target.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                        }, 450);
+                      }}
+                    />
+                  </div>
+                  <div className="price-col">
+                    <label>Sale price</label>
+                    <input
+                      type="number"
+                      value={(Number(job.FinalPrice ?? job.salePrice) || 0).toFixed(2)}
+                      disabled
+                      readOnly
+                    />
+                  </div>
+                </div>
+
+                {job.SalePriceDiscount > 0 && (
+                  <div className="job-card__discount-badge">
+                    Discount: {job.salePriceType === 'percent' ? `${job.SalePriceDiscount}%` : `₹${job.SalePriceDiscount}`}
+                  </div>
+                )}
+              </div>
+
+              {/* Delete */}
+              <button
+                className="job-card__del"
+                onClick={() => handleJobDelete(job)}
+                type="button"
+                disabled={!deleteFlag}
+              >
+                <DeleteOutlineIcon fontSize="small" />
+              </button>
+            </div>
+          );
+        })}
+
+        {/* ── Total row ── */}
+        {/* {finalTotalAmount !== undefined && (
+          <div className="job-card-list__total">
+            <span>Total</span>
+            <span className="job-card-list__total-val">₹{finalTotalAmount}</span>
+          </div>
+        )} */}
+      </div>
+
+      {billSavedFlag !== true && dateRemarkFlag && (
+        <div className="bill-summary-card">
+          <div className="bill-summary-card__title">Bill Summary</div>
+          <div className="s-row">
+            <span className="s-row__lbl">Total amount</span>
+            <span className="s-row__val">₹{totalAmount ?? 0}</span>
+          </div>
+          <div className="s-row">
+            <span className="s-row__lbl">Roundoff amount</span>
+            <span className="s-row__val">{roundUpTotalAmount ?? '0.00'}</span>
+          </div>
+          <RoundOffBox
+            totalAmount={totalAmount}
+            roundUpTotalAmount={roundUpTotalAmount}
+            roundType={roundType}
+            roundValue={roundValue}
+            pendingNote={pendingNote}
+            onToggleChange={handleToggleChange}
+            onValueChange={handleValueChange}
+            onRoundup={handleRoundup}
+          />
+
+          <div className="s-row s-row--final">
+            <span className="s-row__lbl">Final amount</span>
+            <span className="s-row__val">₹{roundUpTotalAmount ?? 0}</span>
+          </div>
+        </div>
+      )}
+
+      {billSavedFlag !== true && dateRemarkFlag && (
+        <div className="date-remark-card">
+          <div className="dr-field">
+            <label htmlFor="remark">Remarks</label>
+            <input
+              type="text"
+              id="remark"
+              placeholder="Optional note…"
+              value={customerEnteredRemark}
+              onChange={handleCustomerEnteredRemark}
+            />
+            <div className="field-error">{customerEnteredRemarkError}</div>
+          </div>
+        </div>
+      )}
+
+      {billSavedFlag !== true && jobList?.length > 0 && (
+        <div className="mrp-action-footer">
+          {editableFlag ? (
+            <>
+              <button
+                className="btn-save-bill"
+                disabled={jobList.length === 0}
+                onClick={() => handleClickOpen('bill')}
+              >
+                SAVE BILL
+              </button>
+              <button
+                className="btn-save-est"
+                disabled={jobList.length === 0}
+                onClick={() => handleClickOpen('estimate')}
+              >
+                SAVE ESTIMATE
+              </button>
+            </>
+          ) : (
+            <button className="btn-continue" onClick={handleContinue}>Continue</button>
+          )}
+          {editableFlag && (
+            <button className="btn-back" onClick={handleBack}>Back</button>
+          )}
+        </div>
+      )}
+
+      {billSavedFlag !== true && jobList?.length > 0 && (
+        <div className="mrp-cancel-row">
+          <span className="cancel-link" onClick={() => saveNextBill()}>Cancel All?</span>
+        </div>
+      )}
+
+      {billSavedFlag !== true && (
+        <ConfirmDialog
+          open={open}
+          onClose={handleClose}
+          onConfirm={() => handleConfirm(actionType)}
+        />
+      )}
+
+      <Dialog open={deleteConfirmOpen} onClose={handleDeleteCancel}>
+        <DialogTitle style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', width: '100%' }}>Delete Job</DialogTitle>
+        <DialogContent>
+          <Typography variant="body1">Are you sure you want to delete this job?</Typography>
+        </DialogContent>
+        <DialogActions style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', width: '100%' }}>
+          <Button onClick={handleDeleteConfirm} variant="contained" color="error">Yes</Button>
+          <Button onClick={handleDeleteCancel} variant="contained" color="inherit">No</Button>
+        </DialogActions>
+      </Dialog>
+
+      {billSavedFlag === true && (
+        <div className="bill-success-banner">
+          <div className="bill-success-banner__icon">✓</div>
+          <div className="bill-success-banner__title">
+            Bill No: <span className="bill-no">{billNo}</span> Generated
+          </div>
+          {!billDataLoaded ? (
+            <div className="bill-success-banner__loading">
+              <CircularProgress size={22} style={{ color: 'inherit' }} />
+              <span>Preparing invoice…</span>
+            </div>
+          ) : (
+            <div className="bill-success-banner__actions">
+              <button className="bill-action-btn bill-action-btn--view" onClick={() => setBillPreviewDrawerOpen(true)} type="button">
+                <PrintIcon style={{ fontSize: 18 }} />
+                <span>View</span>
+              </button>
+              <button className="bill-action-btn bill-action-btn--download" onClick={() => setBillPreviewAction('download')} type="button">
+                <DownloadIcon style={{ fontSize: 18 }} />
+                <span>Download</span>
+              </button>
+              <button className="bill-action-btn bill-action-btn--share" onClick={() => setBillPreviewAction('share')} type="button">
+                <ShareIcon style={{ fontSize: 18 }} />
+                <span>Share</span>
+              </button>
+            </div>
+          )}
+          <button className="btn-next-bill" onClick={(e) => saveNextBill(e, 'next')}>
+            NEXT BILL
+          </button>
+          <JewelleryTaxInvoiceSale
+            open={billPreviewDrawerOpen}
+            onClose={() => { setBillPreviewDrawerOpen(false); setBillPreviewAction(null); }}
+            triggerAction={billPreviewAction}
+            printDataAPI={printDataAPI?.rd[0]}
+            onLoaderChange={(loading) => { if (!loading) setBillDataLoaded(true); }}
+          />
+        </div>
+      )}
+
+      <RateModal
+        show={showRateModal}
+        onClose={() => setShowRateModal(false)}
+        onApply={handleRateApply}
+        joblist={jobList?.filter((item) => selectedRows.includes(item.StockBarcode))}
+      />
+      <input id="scanner-input" style={{ position: 'absolute', left: '-9999px' }} />
+
+      {/* ── Bottom Drawer: Locker ──────────────────────────── */}
+      {lockerDrawerOpen && <div className="mrp-bottom-drawer-overlay" onClick={() => setLockerDrawerOpen(false)} />}
+      <div className={`mrp-bottom-drawer${lockerDrawerOpen ? ' open' : ''}`}>
+        <div className="mrp-bottom-drawer__handle" />
+        <div className="mrp-bottom-drawer__header">
+          <span className="mrp-bottom-drawer__title">Select Locker</span>
+          <button className="mrp-bottom-drawer__close" onClick={() => setLockerDrawerOpen(false)} type="button">
+            <CloseX size={20} />
+          </button>
+        </div>
+        <div className="mrp-bottom-drawer__list">
+          {lockerData?.map((e, i) => (
+            <div
+              key={i}
+              className={`mrp-bottom-drawer__item${String(lockerId) === String(e?.id) ? ' selected' : ''}`}
+              onClick={() => { setSelectLocker(e?.Lockername); setLockerId(e?.id); setLockerErrorMsg(''); setJobnoVal(''); setDisableInp(false); setLockerDrawerOpen(false); }}
+            >
+              <span>{e?.Lockername}</span>
+              {String(lockerId) === String(e?.id) && <span className="mrp-bottom-drawer__check">✓</span>}
+            </div>
+          ))}
+        </div>
+      </div>
+
+      {/* ── Bottom Drawer: Currency ────────────────────────── */}
+      {currencyDrawerOpen && <div className="mrp-bottom-drawer-overlay" onClick={() => setCurrencyDrawerOpen(false)} />}
+      <div className={`mrp-bottom-drawer${currencyDrawerOpen ? ' open' : ''}`}>
+        <div className="mrp-bottom-drawer__handle" />
+        <div className="mrp-bottom-drawer__header">
+          <span className="mrp-bottom-drawer__title">Select Currency</span>
+          <button className="mrp-bottom-drawer__close" onClick={() => setCurrencyDrawerOpen(false)} type="button">
+            <CloseX size={20} />
+          </button>
+        </div>
+        <div className="mrp-bottom-drawer__list">
+          {currencyData?.map((e, i) => (
+            <div
+              key={i}
+              className={`mrp-bottom-drawer__item${String(currencyId) === String(e?.id) ? ' selected' : ''}`}
+              onClick={() => { setSelectVal(e?.Currencycode); setCurrencyID(e?.id); setCurrencyRate(e?.CurrencyRate); setCurrErrorMsg(''); setJobnoVal(''); setDisableInp(false); setCurrencyDrawerOpen(false); }}
+            >
+              <span>{e?.Currencycode}</span>
+              {String(currencyId) === String(e?.id) && <span className="mrp-bottom-drawer__check">✓</span>}
+            </div>
+          ))}
+        </div>
+      </div>
+
+      {/* ── Bottom Drawer: Book ────────────────────────────── */}
+      {bookDrawerOpen && <div className="mrp-bottom-drawer-overlay" onClick={() => setBookDrawerOpen(false)} />}
+      <div className={`mrp-bottom-drawer${bookDrawerOpen ? ' open' : ''}`}>
+        <div className="mrp-bottom-drawer__handle" />
+        <div className="mrp-bottom-drawer__header">
+          <span className="mrp-bottom-drawer__title">Select Book</span>
+          <button className="mrp-bottom-drawer__close" onClick={() => setBookDrawerOpen(false)} type="button">
+            <CloseX size={20} />
+          </button>
+        </div>
+        <div className="mrp-bottom-drawer__list">
+          {bookData?.map((e, i) => (
+            <div
+              key={i}
+              className={`mrp-bottom-drawer__item${String(bookId) === String(e?.id) ? ' selected' : ''}`}
+              onClick={() => { setSelectBook(e?.id); setBookId(e?.id); setBookErrorMsg(''); setJobnoVal(''); setDisableInp(false); setBookDrawerOpen(false); }}
+            >
+              <span>{e?.BookName}</span>
+              {String(bookId) === String(e?.id) && <span className="mrp-bottom-drawer__check">✓</span>}
+            </div>
+          ))}
+        </div>
+      </div>
+
+      {/* ── Bottom Drawer: Date Picker ─────────────────────── */}
+      {datePickerDrawerOpen && <div className="mrp-bottom-drawer-overlay" onClick={() => setDatePickerDrawerOpen(false)} />}
+      <div className={`mrp-bottom-drawer mrp-dp-drawer${datePickerDrawerOpen ? ' open' : ''}`}>
+        <div className="mrp-bottom-drawer__handle" />
+        <div className="mrp-bottom-drawer__header">
+          <span className="mrp-bottom-drawer__title">Select Date</span>
+          <button className="mrp-bottom-drawer__close" onClick={() => setDatePickerDrawerOpen(false)} type="button">
+            <CloseX size={20} />
+          </button>
+        </div>
+        <div className="mrp-dp-calendar">
+          <div className="mrp-dp-nav">
+            <button className="mrp-dp-nav__btn" onClick={handleDpPrevMonth} type="button">‹</button>
+            <span className="mrp-dp-nav__label">{DP_MONTHS[dpViewMonth]} {dpViewYear}</span>
+            <button className="mrp-dp-nav__btn" onClick={handleDpNextMonth} type="button">›</button>
+          </div>
+          <div className="mrp-dp-grid">
+            {DP_WEEKDAYS.map(w => <div key={w} className="mrp-dp-grid__hdr">{w}</div>)}
+            {Array.from({ length: new Date(dpViewYear, dpViewMonth, 1).getDay() }).map((_, i) => <div key={`gap-${i}`} />)}
+            {Array.from({ length: new Date(dpViewYear, dpViewMonth + 1, 0).getDate() }, (_, i) => i + 1).map(day => {
+              const ms = String(dpViewMonth + 1).padStart(2, '0');
+              const ds = String(day).padStart(2, '0');
+              const dateStr = `${dpViewYear}-${ms}-${ds}`;
+              const isSelected = customerEnteredDate === dateStr;
+              const isToday = dateStr === getTodayStr();
+              return (
+                <button
+                  key={day}
+                  type="button"
+                  className={`mrp-dp-grid__day${isSelected ? ' sel' : ''}${isToday && !isSelected ? ' today' : ''}`}
+                  onClick={() => handleDpSelectDay(day)}
+                >
+                  {day}
+                </button>
+              );
+            })}
+          </div>
+        </div>
+      </div>
+
+      {resumeDialogOpen && (
+        <div className="mrp-resume-overlay">
+          <div className="mrp-resume-sheet">
+            <div className="mrp-resume-sheet__icon">📋</div>
+            <div className="mrp-resume-sheet__title">Resume Session?</div>
+            <div className="mrp-resume-sheet__text">
+              You have unsaved form data from your previous session.<br />Would you like to continue where you left off?
+            </div>
+            <div className="mrp-resume-sheet__actions">
+              <button className="mrp-resume-sheet__btn mrp-resume-sheet__btn--primary" onClick={applyResumeData}>
+                ✓ Resume
+              </button>
+              <button className="mrp-resume-sheet__btn mrp-resume-sheet__btn--ghost" onClick={discardResumeData}>
+                Start Fresh
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+    </div>
+  );
+};
+
+export default MRPBill;

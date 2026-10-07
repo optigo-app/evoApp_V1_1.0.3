@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import "./AddCustomer.scss";
 import {
   Button,
@@ -10,12 +10,16 @@ import {
   Link,
   IconButton,
   Divider,
+  Select,
+  MenuItem,
+  InputAdornment,
 } from "@mui/material";
 import { useNavigate } from "react-router-dom";
 import { House, Save, UserPlus, X } from "lucide-react";
 import LoadingBackdrop from "../../Utils/LoadingBackdrop";
 import { showToast } from "../../Utils/Tostify/ToastManager";
 import { CallApi } from "../../API/CallApi/CallApi";
+import axios from "axios";
 
 const AddCustomer = () => {
   const [input, setInput] = useState("");
@@ -26,6 +30,9 @@ const AddCustomer = () => {
   const [formErrors, setFormErrors] = useState({});
   const [error, setError] = useState("");
   const navigate = useNavigate();
+
+  const [countryList, setCountryList] = useState([]);
+  const [selectedCountry, setSelectedCountry] = useState(null);
 
   const [form, setForm] = useState({
     firstName: "",
@@ -40,6 +47,35 @@ const AddCustomer = () => {
     fullAddress: "",
   });
 
+  // Load MobileCountryCode master data once on mount:
+  // - Dropdown list only shows entries where IsActive === 1
+  // - Default selected entry is the one where IsDefault === 1
+  //   (falls back to the first active entry if none is marked default)
+  useEffect(() => {
+    let masterData = [];
+    try {
+      masterData =
+        JSON.parse(sessionStorage.getItem("MobileCountryCode")) || [];
+    } catch (e) {
+      masterData = [];
+    }
+
+    const activeCountries = (masterData || []).filter(
+      (c) => Number(c.IsActive) === 1
+    );
+
+    const defaultCountry =
+      activeCountries.find((c) => Number(c.IsDefault) === 1) ||
+      masterData.find((c) => Number(c.IsDefault) === 1) ||
+      activeCountries[0] ||
+      null;
+
+    setCountryList(activeCountries);
+    setSelectedCountry(defaultCountry);
+  }, []);
+
+  const phoneLength = selectedCountry?.PhoneLength || 10;
+
   const handleSearch = async () => {
     setLoading(false);
     const trimmedInput = input.trim();
@@ -49,10 +85,10 @@ const AddCustomer = () => {
     }
 
     const isEmail = /^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$/.test(trimmedInput);
-    const isMobile = /^[0-9]{10}$/.test(trimmedInput);
+    const isMobile = new RegExp(`^[0-9]{${phoneLength}}$`).test(trimmedInput);
 
     if (!isEmail && !isMobile) {
-      setError("Please enter a valid mobile number or email.");
+      setError(`Please enter a valid ${phoneLength}-digit mobile number or email.`);
       return;
     }
 
@@ -101,6 +137,7 @@ const AddCustomer = () => {
         bgColor: "linear-gradient(to right, #b2069b, #3909c2)",
         fontColor: "#fff",
         duration: 5000,
+        icon: "info"
       });
       setFoundCustomer(response?.DT[0]);
     }
@@ -121,18 +158,37 @@ const AddCustomer = () => {
     }));
   };
 
+  // Called when the user picks a different country code from the dropdown
+  const handleCountryChange = (e) => {
+    const countryId = e.target.value;
+    const country = countryList.find((c) => c.id === countryId) || null;
+    setSelectedCountry(country);
+
+    // Trim the currently entered mobile number to the new country's PhoneLength
+    setForm((prevForm) => ({
+      ...prevForm,
+      mobile: prevForm.mobile.slice(0, country?.PhoneLength || 10),
+    }));
+
+    setFormErrors((prevErrors) => ({
+      ...prevErrors,
+      mobile: "",
+    }));
+  };
+
   const handleModalSave = async () => {
+    if (loading) return; // 🚫 prevents duplicate submits while an API call is in-flight
     const errors = {};
 
     // Regex definitions
     const nameRegex = /^[A-Za-z\s]{2,50}$/;
     const lastNameRegex = /^[A-Za-z\s]{0,50}$/;
-    const mobileRegex = /^\d{10}$/;
+    const mobileRegex = new RegExp(`^\\d{${phoneLength}}$`);
     const emailRegex = /^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$/;
     const cityRegex = /^[A-Za-z\s]{2,50}$/;
     const areaRegex = /^[A-Za-z0-9\s]{2,100}$/;
     const stateRegex = /^[A-Za-z\s]{2,50}$/;
-    const pincodeRegex = /^\d{5,6}$/;
+    const pincodeRegex = /^[A-Za-z0-9\s]{1,12}$/;
     const addressRegex = /^.{5,200}$/;
 
     // Required fields
@@ -149,7 +205,7 @@ const AddCustomer = () => {
     if (!form.mobile.trim()) {
       errors.mobile = "Mobile number is required";
     } else if (!mobileRegex.test(form.mobile.trim())) {
-      errors.mobile = "Enter a valid 10-digit mobile number";
+      errors.mobile = `Enter a valid ${phoneLength}-digit mobile number`;
     }
 
     if (!form.email.trim()) {
@@ -171,7 +227,7 @@ const AddCustomer = () => {
     }
 
     if (form.pincode && !pincodeRegex.test(form.pincode.trim())) {
-      errors.pincode = "Enter 5 or 6 digit pincode";
+      errors.pincode = "Only letters and numbers allowed (max 12 chars)";
     }
 
     if (form.fullAddress && !addressRegex.test(form.fullAddress.trim())) {
@@ -195,6 +251,8 @@ const AddCustomer = () => {
           FirstName: form.firstName,
           LastName: form.lastName,
           CustMobile: form.mobile,
+          MobileCountryCode: selectedCountry?.mobileprefix || "",
+          Mobile_Countryid: selectedCountry?.id || "",
           CustEmail: form.email,
           Area: form.area,
           City: form.city,
@@ -206,10 +264,52 @@ const AddCustomer = () => {
       ];
 
       const body = {
-        Mode: "CutomerRegister",
+        Mode: "CustomerRegister",
         Token: `"${Device_Token}"`,
         ReqData: JSON.stringify(reqData),
       };
+
+      const APIURL = (window.location.hostname === 'localhost'
+        || window.location.hostname === 'nzen'
+      ) ? 'http://newnextjs.web/api/whatsapp/templates/send' : 'https://apilx.optigoapps.com/api/whatsapp/templates/send';
+      const apiSv = (window.location.hostname === 'localhost'
+        || window.location.hostname === 'nzen'
+      ) ? 0 : 1;
+      const yearcode = sessionStorage.getItem("yearCode");
+
+      const profileData = JSON.parse(sessionStorage.getItem("profileData") || "{}");
+      await axios.post(
+        APIURL,
+        {
+          phoneNo: profileData?.CompanyTellNo,
+          appuserid: profileData?.userid,
+          customerId: "",
+          type: "template",
+          template: {
+            name: "103_backendcustomer",
+            language: { code: "en" },
+            components: [
+              {
+                type: "body",
+                parameters: [
+                  { type: "text", text: form.firstName },
+                  { type: "text", text: form.lastName },
+                  { type: "text", text: profileData?.CompanyFullName || "" },
+                  { type: "text", text: `${profileData?.firstname || ""} ${profileData?.lastname || ""}`.trim() },
+                ],
+              },
+            ],
+          },
+        },
+        {
+          headers: {
+            YearCode: yearcode,
+            sv: apiSv,
+            version: "v1",
+            sp: 16 
+          },
+        }
+      );
 
       const response = await CallApi(body);
       if (response?.DT[0]?.stat == 1) {
@@ -262,8 +362,9 @@ const AddCustomer = () => {
             showToast({
               message: "Customer Session Start",
               bgColor: "linear-gradient(to right, #b2069b, #3909c2)",
-              fontColor: "black",
+              fontColor: "white",
               duration: 5000,
+              icon: "success"
             });
           }
           setLoading(false);
@@ -278,6 +379,7 @@ const AddCustomer = () => {
           bgColor: "linear-gradient(to right, #b2069b, #3909c2)",
           fontColor: "#fff",
           duration: 5000,
+          icon: "remove"
         });
       }
 
@@ -286,7 +388,14 @@ const AddCustomer = () => {
         ...form,
       });
       setLoading(false);
+
+
+
+
+
+
     } catch (error) {
+      setLoading(false);
       console.error("Error saving customer:", error);
     }
   };
@@ -308,12 +417,6 @@ const AddCustomer = () => {
     };
     const response = await CallApi(body);
     if (response?.DT[0]?.stat == 1) {
-      // showToast({
-      //   message: "Now Customer OnFloor End Session Start",
-      //   bgColor: "#4caf50",
-      //   fontColor: "#fff",
-      //   duration: 5000,
-      // });
       localStorage.removeItem("AllScanJobData");
 
       const body = {
@@ -333,17 +436,12 @@ const AddCustomer = () => {
       const response = await CallApi(body);
       setLoading(false);
       if (response?.DT[0]?.stat == 1) {
-        // showToast({
-        //   message: "Customer Session Start",
-        //   bgColor: "#4caf50",
-        //   fontColor: "#fff",
-        //   duration: 5000,
-        // });
         showToast({
           message: "Session Started Customer on Floor",
           bgColor: "linear-gradient(to right, #b2069b, #3909c2)",
           fontColor: "#fff",
           duration: 5000,
+          icon: "success"
         });
         sessionStorage.setItem(
           "curruntActiveCustomer",
@@ -444,11 +542,15 @@ const AddCustomer = () => {
         <Modal
           open={openModal}
           onClose={() => setOpenModal(false)}
-          sx={{ outline: "none" }}
+          disableRestoreFocus
+          sx={{
+            outline: "none",
+            alignItems: "flex-end",
+            display: "flex",
+            justifyContent: "center",
+          }}
         >
           <Box className="addCustomer_modalbox">
-
-            {/* ── Header ── */}
             <Box className="modal-header">
               <Box className="modal-header__left">
                 <Box className="modal-header__icon">
@@ -507,16 +609,55 @@ const AddCustomer = () => {
                 size="small"
               />
 
+              {/* Mobile number with country-code dropdown */}
               <TextField
                 fullWidth
                 label="Mobile number"
                 name="mobile"
                 value={form.mobile}
-                onChange={handleFormChange}
+                onChange={(e) => {
+                  const value = e.target.value.replace(/\D/g, ""); // allow only digits
+                  if (value.length <= phoneLength) {
+                    handleFormChange({
+                      target: { name: "mobile", value },
+                    });
+                  }
+                }}
                 error={!!formErrors.mobile}
-                helperText={formErrors.mobile}
+                helperText={
+                  formErrors.mobile ||
+                  `${form.mobile.length}/${phoneLength} digits`
+                }
                 size="small"
-                inputProps={{ inputMode: "numeric" }}
+                inputProps={{ inputMode: "numeric", maxLength: phoneLength }}
+                InputProps={{
+                  startAdornment: (
+                    <InputAdornment position="start" sx={{ mr: 0 }}>
+                      <Select
+                        variant="standard"
+                        disableUnderline
+                        value={selectedCountry?.id || ""}
+                        onChange={handleCountryChange}
+                        sx={{
+                          minWidth: 90,
+                          fontSize: "14px",
+                          "& .MuiSelect-select": { paddingRight: "24px !important" },
+                        }}
+                        renderValue={() =>
+                          selectedCountry
+                            ? `${selectedCountry.CountryShortName} +${selectedCountry.mobileprefix}`
+                            : "Select"
+                        }
+                      >
+                        {countryList.map((c) => (
+                          <MenuItem key={c.id} value={c.id}>
+                            {c.countryname} (+{c.mobileprefix})
+                          </MenuItem>
+                        ))}
+                      </Select>
+                    </InputAdornment>
+                  ),
+                }}
               />
 
               <Divider />
@@ -549,8 +690,22 @@ const AddCustomer = () => {
                   <Box className="field-row">
                     <TextField label="City" name="city" value={form.city}
                       onChange={handleFormChange} size="small" fullWidth />
-                    <TextField label="Pincode" name="pincode" value={form.pincode}
-                      onChange={handleFormChange} size="small" fullWidth />
+                    <TextField
+                      label="Pincode"
+                      name="pincode"
+                      value={form.pincode}
+                      onChange={(e) => {
+                        const value = e.target.value.replace(/[^A-Za-z0-9\s]/g, ""); // letters/numbers/space only
+                        if (value.length <= 12) {
+                          handleFormChange({ target: { name: "pincode", value } });
+                        }
+                      }}
+                      error={!!formErrors.pincode}
+                      helperText={formErrors.pincode}
+                      size="small"
+                      inputProps={{ maxLength: 12 }}
+                      fullWidth
+                    />
                   </Box>
                   <TextField fullWidth label="Area / Locality" name="area"
                     value={form.area} onChange={handleFormChange} size="small" />
@@ -574,8 +729,9 @@ const AddCustomer = () => {
                 onClick={handleModalSave}
                 className="save-btn"
                 startIcon={<Save size={15} />}
+                disabled={loading}
               >
-                Save & Start Session 
+                {loading ? "Saving..." : "Save & Start Session"}
               </Button>
             </Box>
           </Box>
